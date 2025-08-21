@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import VoiceOrbPro from "./components/VoiceOrbPro";
+import VoiceOrbAdvanced from "./components/VoiceOrbAdvanced";
 import IFCLogoWatermark from "./components/IFCLogoWatermark";
 import LanguageSelector from "./components/LanguageSelector";
 import MobileChatHistory from "./components/MobileChatHistory";
@@ -36,6 +36,7 @@ function OpenAIApp() {
   const [selectedAgentName, setSelectedAgentName] = useState<string>("mainReceptionist");
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>("DISCONNECTED");
   const [isPTTUserSpeaking, setIsPTTUserSpeaking] = useState<boolean>(false);
+  const [isAssistantSpeaking, setIsAssistantSpeaking] = useState<boolean>(false);
   const [selectedLanguage, setSelectedLanguage] = useState<'FR' | 'KH' | 'EN'>('FR');
   const [mobileAudioReady, setMobileAudioReady] = useState<boolean>(false);
   const [audioUnlocked, setAudioUnlocked] = useState<boolean>(false);
@@ -111,6 +112,28 @@ function OpenAIApp() {
         }
       };
       
+      // Monitor assistant speaking state
+      const handlePlay = () => {
+        console.log('🔊 Assistant started speaking');
+        setIsAssistantSpeaking(true);
+      };
+
+      const handlePause = () => {
+        console.log('🔊 Assistant stopped speaking');
+        setIsAssistantSpeaking(false);
+      };
+
+      const handleEnded = () => {
+        console.log('🔊 Assistant audio ended');
+        setIsAssistantSpeaking(false);
+      };
+
+      // Add event listeners for audio playback
+      sdkAudioElement.addEventListener('play', handlePlay);
+      sdkAudioElement.addEventListener('pause', handlePause);
+      sdkAudioElement.addEventListener('ended', handleEnded);
+      sdkAudioElement.addEventListener('emptied', handleEnded);
+
       // Watch for srcObject changes (this is when WebRTC stream arrives)
       const observer = new MutationObserver(() => {
         if (sdkAudioElement.srcObject && !mobileAudioReady) {
@@ -159,6 +182,10 @@ function OpenAIApp() {
       // Cleanup observer on unmount
       return () => {
         observer.disconnect();
+        sdkAudioElement.removeEventListener('play', handlePlay);
+        sdkAudioElement.removeEventListener('pause', handlePause);
+        sdkAudioElement.removeEventListener('ended', handleEnded);
+        sdkAudioElement.removeEventListener('emptied', handleEnded);
         if (cleanup) cleanup();
       };
     }
@@ -495,10 +522,11 @@ function OpenAIApp() {
 
       {/* Center Orb */}
       <div className="orb-wrapper">
-        <VoiceOrbPro 
-          isSpeaking={isPTTUserSpeaking} 
+        <VoiceOrbAdvanced 
+          isUserSpeaking={isPTTUserSpeaking} 
+          isAssistantSpeaking={isAssistantSpeaking}
           isConnected={sessionStatus === "CONNECTED"}
-          isRecording={isPTTUserSpeaking}
+          isListening={sessionStatus === "CONNECTED" && !isPTTUserSpeaking && !isAssistantSpeaking}
         />
         
         {/* Hint text */}

@@ -86,13 +86,19 @@
     align-items: center;
   }
 
-  /* Enhanced Orb Container */
+  /* Enhanced Orb Container - Perfect Circle */
   .orb-wrapper {
     width: 240px !important;
     height: 240px !important;
     margin-top: -40px;
     position: relative;
     z-index: 10;
+    border-radius: 50% !important;
+    overflow: hidden !important;
+    background: transparent;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     filter: drop-shadow(0 8px 32px rgba(44, 62, 80, 0.12));
   }
 
