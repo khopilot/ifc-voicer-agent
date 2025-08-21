@@ -56,11 +56,8 @@ export const mainReceptionistAgent = useOptimized ? optimizedMainAgent : new Rea
   handoffDescription: 'Main receptionist of Institut français du Cambodge - handles general inquiries in FR/KH/EN',
 });
 
-// Add handoffs after all agents are created to avoid circular dependencies
-(mainReceptionistAgent.handoffs as any).push(coursesAgent, eventsAgent, culturalAgent);
-(coursesAgent.handoffs as any).push(mainReceptionistAgent);
-(eventsAgent.handoffs as any).push(mainReceptionistAgent);
-(culturalAgent.handoffs as any).push(mainReceptionistAgent);
+// Handoffs are managed through transfer tools defined in each agent's configuration
+// This prevents circular dependencies and conflicts with the tool-based transfer system
 
 // Export optimized scenario if flag is enabled
 export const institutFrancaisCambodgeScenario = useOptimized ? optimizedInstitutFrancaisCambodgeScenario : [

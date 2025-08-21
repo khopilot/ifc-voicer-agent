@@ -13,16 +13,9 @@ const coursesAgent = optimizedCoursesAgent;
 const eventsAgent = optimizedEventsAgent;
 const culturalAgent = optimizedCulturalAgent;
 
-// Configure intelligent handoff system with bidirectional connections
-// This allows smooth transitions between agents while preserving context
-
-// Main receptionist can transfer to all specialists
-(mainAgent.handoffs as any).push(coursesAgent, eventsAgent, culturalAgent);
-
-// Specialists can ONLY transfer between each other (NO back to main - prevents double transfers)
-(coursesAgent.handoffs as any).push(eventsAgent, culturalAgent);
-(eventsAgent.handoffs as any).push(coursesAgent, culturalAgent);
-(culturalAgent.handoffs as any).push(coursesAgent, eventsAgent);
+// Configure intelligent handoff system using tools-based transfers
+// Each agent has transfer tools configured in their respective files
+// This prevents conflicts and allows smooth transitions between agents
 
 // Export the optimized scenario with enhanced agents
 export const optimizedInstitutFrancaisCambodgeScenario = [
