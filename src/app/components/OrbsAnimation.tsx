@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 interface Orb {
   x: number;
@@ -20,7 +20,7 @@ interface OrbsAnimationProps {
 export default function OrbsAnimation({ isSpeaking = false, isConnected = false }: OrbsAnimationProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const orbsRef = useRef<Orb[]>([]);
-  const animationIdRef = useRef<number>();
+  const animationIdRef = useRef<number>(0);
   const mouseRef = useRef({ x: 0, y: 0 });
 
   // Institut français colors - Navy blue with better visibility

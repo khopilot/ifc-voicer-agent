@@ -6,7 +6,6 @@ import { culturalAgent } from './culturalAgent';
 
 // Import optimized configuration
 import { 
-  optimizedAgentConfig,
   institutFrancaisCambodgeScenario as optimizedScenario,
   mainReceptionistAgent as optimizedMainAgent 
 } from './optimizedIndex';

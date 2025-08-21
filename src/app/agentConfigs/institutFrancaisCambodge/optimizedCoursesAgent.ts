@@ -1,5 +1,5 @@
 import { RealtimeAgent } from '@openai/agents/realtime';
-import { knowledgeBase } from './knowledgeBase';
+// import { knowledgeBase } from './knowledgeBase';
 
 export const optimizedCoursesAgent = new RealtimeAgent({
   name: 'courses',

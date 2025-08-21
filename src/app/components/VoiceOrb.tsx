@@ -8,7 +8,7 @@ interface VoiceOrbProps {
 
 export default function VoiceOrb({ isSpeaking = false, isConnected = false }: VoiceOrbProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationIdRef = useRef<number>();
+  const animationIdRef = useRef<number>(0);
   const noiseRef = useRef<number[]>([]);
   const timeRef = useRef(0);
 

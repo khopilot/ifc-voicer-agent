@@ -1,4 +1,4 @@
-import { RealtimeAgent } from '@openai/agents/realtime';
+// import { RealtimeAgent } from '@openai/agents/realtime';
 import { optimizedMainReceptionistAgent } from './optimizedMainAgent';
 import { optimizedCoursesAgent } from './optimizedCoursesAgent';
 import { optimizedEventsAgent } from './optimizedEventsAgent';

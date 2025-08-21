@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { v4 as uuidv4 } from "uuid";
+// import { useSearchParams } from "next/navigation";
+// import { v4 as uuidv4 } from "uuid";
 import VoiceOrbPro from "./components/VoiceOrbPro";
 import IFCLogo from "./components/IFCLogo";
 import "./components/MinimalistInterface.css";
@@ -11,7 +11,7 @@ import { useTranscript } from "@/app/contexts/TranscriptContext";
 import { useEvent } from "@/app/contexts/EventContext";
 import { useRealtimeSession } from "./hooks/useRealtimeSession";
 import { createModerationGuardrail } from "@/app/agentConfigs/guardrails";
-import { allAgentSets, defaultAgentSetKey } from "@/app/agentConfigs";
+import { allAgentSets } from "@/app/agentConfigs";
 import { institutFrancaisCambodgeScenario, institutFrancaisCambodgeCompanyName } from "@/app/agentConfigs/institutFrancaisCambodge";
 import useAudioDownload from "./hooks/useAudioDownload";
 import { useHandleSessionHistory } from "./hooks/useHandleSessionHistory";
@@ -21,12 +21,12 @@ const sdkScenarioMap: Record<string, RealtimeAgent[]> = {
 };
 
 function MinimalistApp() {
-  const searchParams = useSearchParams()!;
-  const { addTranscriptMessage, addTranscriptBreadcrumb, transcriptItems } = useTranscript();
-  const { logClientEvent, logServerEvent } = useEvent();
+  // const searchParams = useSearchParams()!;
+  const { addTranscriptBreadcrumb, transcriptItems } = useTranscript();
+  const { logClientEvent } = useEvent();
   
   const [selectedAgentName, setSelectedAgentName] = useState<string>("");
-  const [selectedAgentConfigSet, setSelectedAgentConfigSet] = useState<RealtimeAgent[] | null>(null);
+  // const [selectedAgentConfigSet, setSelectedAgentConfigSet] = useState<RealtimeAgent[] | null>(null);
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>("DISCONNECTED");
   const [isPTTActive, setIsPTTActive] = useState<boolean>(false);
   const [isPTTUserSpeaking, setIsPTTUserSpeaking] = useState<boolean>(false);
@@ -52,10 +52,10 @@ function MinimalistApp() {
   const {
     connect,
     disconnect,
-    sendUserText,
+    // sendUserText,
     sendEvent,
     interrupt,
-    mute,
+    // mute,
   } = useRealtimeSession({
     onConnectionChange: (s) => setSessionStatus(s as SessionStatus),
     onAgentHandoff: (agentName: string) => {
@@ -64,7 +64,7 @@ function MinimalistApp() {
     },
   });
 
-  const { startRecording, stopRecording, downloadRecording } = useAudioDownload();
+  const { startRecording, stopRecording } = useAudioDownload();
 
   const sendClientEvent = (eventObj: any, eventNameSuffix = "") => {
     try {
@@ -80,7 +80,7 @@ function MinimalistApp() {
   useEffect(() => {
     const agents = allAgentSets["institutFrancaisCambodge"];
     const agentKeyToUse = agents[0]?.name || "";
-    setSelectedAgentConfigSet(agents);
+    // setSelectedAgentConfigSet(agents);
     setSelectedAgentName(agentKeyToUse);
   }, []);
 
