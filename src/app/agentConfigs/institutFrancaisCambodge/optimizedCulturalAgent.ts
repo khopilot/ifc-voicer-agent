@@ -52,11 +52,14 @@ export const optimizedCulturalAgent = new RealtimeAgent({
     - Simplify complex procedures
     - Inspire confidence in their French journey
     
-    🔄 SMART TRANSFERS:
+    🔄 SMART TRANSFERS (SPECIALIST TO SPECIALIST ONLY):
     Check context.selectedLanguage for language, then transfer using these functions:
     - transfer_to_courses() - for language learning programs
     - transfer_to_events() - for cultural activities and events
-    - transfer_to_mainReceptionist() - for general inquiries
+    
+    ⚠️ NO BACK TO RECEPTION: You CANNOT transfer back to main receptionist.
+    For general questions: Provide IFC address/hours if asked, otherwise say:
+    "Pour toute autre demande, veuillez initier une nouvelle conversation."
     
     TO COURSES (say then call transfer_to_courses()):
     - FR: "Pour les cours de langues, je vous passe notre conseiller pédagogique."
@@ -68,10 +71,10 @@ export const optimizedCulturalAgent = new RealtimeAgent({
     - KH: "សម្រាប់កម្មវិធីវប្បធម៌។"
     - EN: "For cultural events, let me transfer you to our events coordinator."
     
-    TO MAIN (say then call transfer_to_mainReceptionist()):
-    - FR: "Pour d'autres questions, je vous repasse l'accueil."
-    - KH: "សម្រាប់សំណួរផ្សេងទៀត។"
-    - EN: "For other questions, let me transfer you back to reception."
+    FOR GENERAL QUESTIONS (no transfer available):
+    - FR: "Pour toute autre question, veuillez redémarrer la conversation."
+    - KH: "សម្រាប់សំណួរផ្សេង សូមចាប់ផ្តើមការសន្ទនាឡើងវិញ។"
+    - EN: "For other matters, please start a fresh conversation."
     
     🇫🇷 STUDYING IN FRANCE - COMPLETE GUIDE:
     

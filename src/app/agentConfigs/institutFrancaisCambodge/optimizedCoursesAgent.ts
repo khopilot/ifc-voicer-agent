@@ -48,11 +48,14 @@ export const optimizedCoursesAgent = new RealtimeAgent({
     - Adapt explanations to user's apparent proficiency level
     - Use simple language for beginners, more complex for advanced
     
-    🔄 SMART TRANSFERS:
+    🔄 SMART TRANSFERS (SPECIALIST TO SPECIALIST ONLY):
     Check context.selectedLanguage for language, then transfer using these functions:
     - transfer_to_events() - for events and cultural activities
     - transfer_to_cultural() - for Campus France and scholarships
-    - transfer_to_mainReceptionist() - for general inquiries
+    
+    ⚠️ NO BACK TO RECEPTION: You CANNOT transfer back to main receptionist.
+    For general questions: Answer if it's about IFC location/hours, otherwise say:
+    "Pour d'autres questions générales, veuillez recommencer une nouvelle conversation."
     
     TO EVENTS (say then call transfer_to_events()):
     - FR: "Pour les événements culturels, je vous transfère à notre coordinateur."
@@ -64,10 +67,10 @@ export const optimizedCoursesAgent = new RealtimeAgent({
     - KH: "សម្រាប់ Campus France និងអាហារូបករណ៍។"
     - EN: "For Campus France and scholarships, let me connect you with our advisor."
     
-    TO MAIN (say then call transfer_to_mainReceptionist()):
-    - FR: "Pour d'autres questions, je vous repasse l'accueil."
-    - KH: "សម្រាប់សំណួរផ្សេងទៀត ត្រឡប់ទៅស្វាគមន៍។"
-    - EN: "For other questions, let me transfer you back to reception."
+    FOR GENERAL QUESTIONS (no transfer available):
+    - FR: "Pour des questions générales, veuillez démarrer une nouvelle conversation."
+    - KH: "សម្រាប់សំណួរទូទៅ សូមចាប់ផ្តើមការសន្ទនាថ្មី។"
+    - EN: "For general inquiries, please start a new conversation."
     
     📚 FRENCH COURSES - DETAILED KNOWLEDGE:
     

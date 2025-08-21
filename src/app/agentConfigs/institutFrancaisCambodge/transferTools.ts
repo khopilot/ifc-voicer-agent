@@ -21,7 +21,10 @@ export function createTransferTools(agentNames: string[]) {
 }
 
 // Pre-defined transfer tools for our agents
+// Main can transfer to all specialists
 export const mainTransferTools = createTransferTools(['courses', 'events', 'cultural']);
-export const coursesTransferTools = createTransferTools(['mainReceptionist', 'events', 'cultural']);
-export const eventsTransferTools = createTransferTools(['mainReceptionist', 'courses', 'cultural']);
-export const culturalTransferTools = createTransferTools(['mainReceptionist', 'courses', 'events']);
+
+// Specialists can ONLY transfer between each other (no back to main - prevents double transfers)
+export const coursesTransferTools = createTransferTools(['events', 'cultural']);
+export const eventsTransferTools = createTransferTools(['courses', 'cultural']);
+export const culturalTransferTools = createTransferTools(['courses', 'events']);

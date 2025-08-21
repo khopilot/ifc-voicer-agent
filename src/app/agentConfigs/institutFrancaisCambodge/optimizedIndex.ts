@@ -19,10 +19,10 @@ const culturalAgent = optimizedCulturalAgent;
 // Main receptionist can transfer to all specialists
 (mainAgent.handoffs as any).push(coursesAgent, eventsAgent, culturalAgent);
 
-// Each specialist can transfer back to main or to other specialists
-(coursesAgent.handoffs as any).push(mainAgent, eventsAgent, culturalAgent);
-(eventsAgent.handoffs as any).push(mainAgent, coursesAgent, culturalAgent);
-(culturalAgent.handoffs as any).push(mainAgent, coursesAgent, eventsAgent);
+// Specialists can ONLY transfer between each other (NO back to main - prevents double transfers)
+(coursesAgent.handoffs as any).push(eventsAgent, culturalAgent);
+(eventsAgent.handoffs as any).push(coursesAgent, culturalAgent);
+(culturalAgent.handoffs as any).push(coursesAgent, eventsAgent);
 
 // Export the optimized scenario with enhanced agents
 export const optimizedInstitutFrancaisCambodgeScenario = [
