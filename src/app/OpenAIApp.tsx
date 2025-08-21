@@ -62,44 +62,106 @@ function OpenAIApp() {
     if (sdkAudioElement && !audioElementRef.current) {
       audioElementRef.current = sdkAudioElement;
       
-      // Add mobile audio event listeners
+      // Add mobile MediaStream-specific event listeners
       sdkAudioElement.addEventListener('loadstart', () => {
         console.log('🔊 Audio loading started');
         console.log('🔊 Audio src:', sdkAudioElement.src);
         console.log('🔊 Audio srcObject:', sdkAudioElement.srcObject);
       });
       
-      sdkAudioElement.addEventListener('canplay', async () => {
-        console.log('Audio can play - attempting to play for mobile');
+      // CRITICAL: Handle MediaStream srcObject changes (WebRTC streams)
+      const handleSrcObjectChange = async () => {
+        console.log('🔊 MediaStream srcObject changed');
+        console.log('🔊 New srcObject:', sdkAudioElement.srcObject);
+        
+        if (sdkAudioElement.srcObject) {
+          const stream = sdkAudioElement.srcObject as MediaStream;
+          console.log('🔊 MediaStream active:', stream.active);
+          console.log('🔊 MediaStream audio tracks:', stream.getAudioTracks().length);
+          
+          if (stream.getAudioTracks().length > 0) {
+            const audioTrack = stream.getAudioTracks()[0];
+            console.log('🔊 Audio track enabled:', audioTrack.enabled);
+            console.log('🔊 Audio track muted:', audioTrack.muted);
+            console.log('🔊 Audio track readyState:', audioTrack.readyState);
+          }
+          
+          // Mobile fix: Force play after srcObject is set
+          try {
+            sdkAudioElement.muted = false;
+            sdkAudioElement.volume = 1.0;
+            
+            // Wait for metadata to load before playing (critical for mobile)
+            if (sdkAudioElement.readyState >= 1) {
+              await sdkAudioElement.play();
+              console.log('🔊 ✅ MediaStream playing immediately');
+              setMobileAudioReady(true);
+            } else {
+              console.log('🔊 Waiting for metadata to load...');
+            }
+          } catch (error) {
+            console.log('🔊 MediaStream play failed:', error);
+          }
+        }
+      };
+      
+      // Watch for srcObject changes (this is when WebRTC stream arrives)
+      const observer = new MutationObserver(() => {
+        if (sdkAudioElement.srcObject && !mobileAudioReady) {
+          handleSrcObjectChange();
+        }
+      });
+      
+      observer.observe(sdkAudioElement, { attributes: true, attributeFilter: ['src'] });
+      
+      sdkAudioElement.addEventListener('loadedmetadata', async () => {
+        console.log('🔊 Metadata loaded - attempting mobile play');
         try {
-          // Ensure audio plays on mobile when stream is ready
-          if (sessionStatus === 'CONNECTED') {
-            // Double-check audio is unmuted before playing
+          if (sessionStatus === 'CONNECTED' && sdkAudioElement.srcObject) {
             sdkAudioElement.muted = false;
             sdkAudioElement.volume = 1.0;
             await sdkAudioElement.play();
-            console.log('Audio playing successfully on mobile');
+            console.log('🔊 ✅ Playing after metadata loaded');
+            setMobileAudioReady(true);
           }
         } catch (error) {
-          console.log('Audio play attempt failed (normal on some mobiles):', error);
+          console.log('🔊 Play after metadata failed:', error);
+        }
+      });
+      
+      sdkAudioElement.addEventListener('canplay', async () => {
+        console.log('🔊 Can play event - final mobile attempt');
+        try {
+          if (sessionStatus === 'CONNECTED' && !mobileAudioReady) {
+            sdkAudioElement.muted = false;
+            sdkAudioElement.volume = 1.0;
+            await sdkAudioElement.play();
+            console.log('🔊 ✅ Final play attempt succeeded');
+            setMobileAudioReady(true);
+          }
+        } catch (error) {
+          console.log('🔊 Final play attempt failed:', error);
         }
       });
       
       sdkAudioElement.addEventListener('play', () => {
-        console.log('Audio started playing');
+        console.log('🔊 ✅ Audio started playing!');
         setMobileAudioReady(true);
       });
       
       sdkAudioElement.addEventListener('pause', () => {
-        console.log('Audio paused');
+        console.log('🔊 Audio paused');
       });
       
       sdkAudioElement.addEventListener('error', (e) => {
-        console.log('Audio error:', e);
+        console.log('🔊 ❌ Audio error:', e);
         setMobileAudioReady(false);
       });
+      
+      // Cleanup observer on unmount
+      return () => observer.disconnect();
     }
-  }, [sdkAudioElement, sessionStatus]);
+  }, [sdkAudioElement, sessionStatus, mobileAudioReady]);
 
   const {
     connect,
@@ -153,7 +215,8 @@ function OpenAIApp() {
     }
   };
 
-  // Mobile audio unlock function
+  // Mobile audio unlock function (legacy - now using gesture-based version)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const unlockMobileAudio = async () => {
     if (!sdkAudioElement) return;
     
@@ -195,13 +258,75 @@ function OpenAIApp() {
     }
   };
 
+  // Critical mobile audio unlock with user gesture
+  const unlockMobileAudioWithGesture = async () => {
+    console.log('🔊 MOBILE AUDIO UNLOCK WITH USER GESTURE');
+    
+    try {
+      // 1. Resume AudioContext (required for WebRTC)
+      const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (AudioContextClass) {
+        const ctx = new AudioContextClass();
+        console.log('🔊 AudioContext state:', ctx.state);
+        if (ctx.state === 'suspended') {
+          await ctx.resume();
+          console.log('🔊 ✅ AudioContext resumed');
+        }
+      }
+      
+      // 2. Create and play silent MediaStream to unlock mobile audio
+      try {
+        const silentStream = await navigator.mediaDevices.getUserMedia({ 
+          audio: { 
+            echoCancellation: false, 
+            noiseSuppression: false, 
+            autoGainControl: false 
+          } 
+        });
+        
+        const tempAudio = new Audio();
+        tempAudio.srcObject = silentStream;
+        tempAudio.muted = true; // Don't actually play sound
+        tempAudio.volume = 0;
+        
+        await tempAudio.play();
+        console.log('🔊 ✅ Silent MediaStream played - mobile unlocked');
+        
+        // Stop the silent stream
+        silentStream.getTracks().forEach(track => track.stop());
+        tempAudio.srcObject = null;
+        
+      } catch (streamError) {
+        console.log('🔊 Silent stream unlock failed:', streamError);
+        
+        // Fallback: Try regular silent audio
+        const silentAudio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2+LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmYeBTuL0fPTgjMGHm7A7+OZSA0PVqzn77BdGAhBpePhum8hBjiR1/LNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPTgjQGHm7A7+OZSA0PVqzn77BeGQdApeHhum8iBjiR2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPTgjQGHm/A7+OZSA0PVqzn77BeGQdApeHhum8iBjiR2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYVV1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPTgjQGHm7A7+OZSA0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPTgjQGHm/A7+OZSA0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSA0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSA0PVqzn77BeGQdApeHhum8iAA==');
+        silentAudio.volume = 0;
+        await silentAudio.play();
+        console.log('🔊 ✅ Fallback silent audio played');
+      }
+      
+      // 3. Ensure main audio element is ready
+      if (sdkAudioElement) {
+        sdkAudioElement.muted = false;
+        sdkAudioElement.volume = 1.0;
+        console.log('🔊 Main audio element configured for mobile');
+      }
+      
+      console.log('🔊 ✅ MOBILE AUDIO UNLOCK COMPLETE');
+      
+    } catch (error) {
+      console.log('🔊 ❌ Mobile audio unlock failed:', error);
+    }
+  };
+
   const connectToRealtime = async () => {
     if (sessionStatus !== "DISCONNECTED") return;
     setSessionStatus("CONNECTING");
 
     try {
-      // Unlock mobile audio on user interaction (connect button press)
-      await unlockMobileAudio();
+      // CRITICAL: Unlock mobile audio with user gesture
+      await unlockMobileAudioWithGesture();
       
       const EPHEMERAL_KEY = await fetchEphemeralKey();
       if (!EPHEMERAL_KEY) return;
@@ -230,7 +355,18 @@ function OpenAIApp() {
       if (sdkAudioElement) {
         sdkAudioElement.muted = false;
         sdkAudioElement.volume = 1.0;
-        console.log('Audio element explicitly unmuted for playback');
+        console.log('🔊 Audio element explicitly unmuted for playback');
+        
+        // Force play if srcObject is already set (WebRTC stream might be ready)
+        if (sdkAudioElement.srcObject) {
+          try {
+            await sdkAudioElement.play();
+            console.log('🔊 ✅ Forced play of existing WebRTC stream');
+            setMobileAudioReady(true);
+          } catch (playError) {
+            console.log('🔊 Forced play failed:', playError);
+          }
+        }
       }
       
       // Additional debugging after connection
