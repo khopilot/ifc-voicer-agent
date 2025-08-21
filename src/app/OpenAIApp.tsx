@@ -72,6 +72,9 @@ function OpenAIApp() {
         try {
           // Ensure audio plays on mobile when stream is ready
           if (sessionStatus === 'CONNECTED') {
+            // Double-check audio is unmuted before playing
+            sdkAudioElement.muted = false;
+            sdkAudioElement.volume = 1.0;
             await sdkAudioElement.play();
             console.log('Audio playing successfully on mobile');
           }
@@ -210,6 +213,13 @@ function OpenAIApp() {
           selectedLanguage,
         },
       });
+      
+      // Explicitly ensure audio element is unmuted for playback
+      if (sdkAudioElement) {
+        sdkAudioElement.muted = false;
+        sdkAudioElement.volume = 1.0;
+        console.log('Audio element explicitly unmuted for playback');
+      }
       
       console.log('Connected to realtime with mobile audio support');
     } catch (err) {
