@@ -410,16 +410,20 @@ function OpenAIAppContent({ selectedLanguage, setSelectedLanguage }: {
       console.log('🌐 DEBUG: Language context being passed:', selectedLanguage);
       console.log('🤖 DEBUG: Agents in scenario:', reorderedAgents.map(a => a.name));
       
-      if (!sdkAudioElement) {
-        console.error('❌ No audio element available for connection');
-        setSessionStatus("DISCONNECTED");
-        return;
-      }
+      // Create a temporary audio element for the connection
+      // The SDK will create its own audio element during connection
+      const tempAudioElement = document.createElement('audio');
+      tempAudioElement.muted = false;
+      tempAudioElement.volume = 1.0;
+      tempAudioElement.setAttribute('playsinline', 'true');
+      tempAudioElement.setAttribute('autoplay', 'true');
+      
+      console.log('🔊 DEBUG: Using temporary audio element for connection');
 
       await connect({
         getEphemeralKey: async () => EPHEMERAL_KEY,
         initialAgents: reorderedAgents,
-        audioElement: sdkAudioElement,
+        audioElement: tempAudioElement,
         outputGuardrails: [guardrail],
         extraContext: {
           addTranscriptBreadcrumb,
