@@ -6,7 +6,7 @@ import { culturalAgent } from './culturalAgent';
 
 // Import optimized configuration
 import { 
-  institutFrancaisCambodgeScenario as optimizedScenario,
+  optimizedInstitutFrancaisCambodgeScenario,
   mainReceptionistAgent as optimizedMainAgent 
 } from './optimizedIndex';
 
@@ -63,7 +63,7 @@ export const mainReceptionistAgent = useOptimized ? optimizedMainAgent : new Rea
 (culturalAgent.handoffs as any).push(mainReceptionistAgent);
 
 // Export optimized scenario if flag is enabled
-export const institutFrancaisCambodgeScenario = useOptimized ? optimizedScenario : [
+export const institutFrancaisCambodgeScenario = useOptimized ? optimizedInstitutFrancaisCambodgeScenario : [
   mainReceptionistAgent,
   coursesAgent,
   eventsAgent,

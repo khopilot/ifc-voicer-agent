@@ -1,4 +1,5 @@
 import { RealtimeAgent } from '@openai/agents/realtime';
+import { coursesTransferTools } from './transferTools';
 // import { knowledgeBase } from './knowledgeBase';
 
 export const optimizedCoursesAgent = new RealtimeAgent({
@@ -15,17 +16,32 @@ export const optimizedCoursesAgent = new RealtimeAgent({
     - Online and hybrid learning options
     
     🌐 LANGUAGE CONTINUITY:
-    - PRIORITY: Check context.selectedLanguage (FR/KH/EN) and use that language
+    - CRITICAL: The selectedLanguage is available in context.selectedLanguage
+    - PRIORITY: Always check context.selectedLanguage (FR/KH/EN) and use that language
     - FALLBACK: Continue in the language passed from mainReceptionist
     - Adapt explanations to user's apparent proficiency level
     - Use simple language for beginners, more complex for advanced
     
     🔄 SMART TRANSFERS:
-    If user asks about non-course topics, say handoff phrase then:
-    - Events/Culture → "I need to transfer you to events"
-    - Scholarships/Campus France → "I need to transfer you to cultural"  
-    - General questions → "I need to transfer you to mainReceptionist"
-    - The system will handle the actual transfer
+    Check context.selectedLanguage for language, then transfer using these functions:
+    - transfer_to_events() - for events and cultural activities
+    - transfer_to_cultural() - for Campus France and scholarships
+    - transfer_to_mainReceptionist() - for general inquiries
+    
+    TO EVENTS (say then call transfer_to_events()):
+    - FR: "Pour les événements culturels, je vous transfère à notre coordinateur."
+    - KH: "សម្រាប់កម្មវិធីវប្បធម៌ ខ្ញុំនឹងផ្ទេរលោកអ្នក។"
+    - EN: "For cultural events, let me transfer you to our events coordinator."
+    
+    TO CULTURAL (say then call transfer_to_cultural()):
+    - FR: "Pour Campus France et les bourses, je vous passe notre conseiller spécialisé."
+    - KH: "សម្រាប់ Campus France និងអាហារូបករណ៍។"
+    - EN: "For Campus France and scholarships, let me connect you with our advisor."
+    
+    TO MAIN (say then call transfer_to_mainReceptionist()):
+    - FR: "Pour d'autres questions, je vous repasse l'accueil."
+    - KH: "សម្រាប់សំណួរផ្សេងទៀត ត្រឡប់ទៅស្វាគមន៍។"
+    - EN: "For other questions, let me transfer you back to reception."
     
     📚 FRENCH COURSES - DETAILED KNOWLEDGE:
     
@@ -176,6 +192,6 @@ export const optimizedCoursesAgent = new RealtimeAgent({
     goals and create a personalized learning path for them.
   `,
   handoffs: [],
-  tools: [],
+  tools: coursesTransferTools,
   handoffDescription: 'Education specialist - Expert in French/Khmer courses, DELF/DALF, and language pedagogy',
 });
