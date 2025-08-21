@@ -79,9 +79,12 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
   );
 
   const handleAgentHandoff = (item: any) => {
+    console.log('🔄 AGENT HANDOFF EVENT:', item);
     const history = item.context.history;
     const lastMessage = history[history.length - 1];
     const agentName = lastMessage.name.split("transfer_to_")[1];
+    console.log('🔄 Transferring to agent:', agentName);
+    console.log('🌐 Context being passed:', item.context);
     callbacks.onAgentHandoff?.(agentName);
   };
 

@@ -13,9 +13,17 @@ const coursesAgent = optimizedCoursesAgent;
 const eventsAgent = optimizedEventsAgent;
 const culturalAgent = optimizedCulturalAgent;
 
-// Configure intelligent handoff system using tools-based transfers
-// Each agent has transfer tools configured in their respective files
-// This prevents conflicts and allows smooth transitions between agents
+// Configure intelligent handoff system
+// IMPORTANT: Agents need BOTH transfer tools AND handoffs array populated
+// Tools trigger the transfer, handoffs array defines which agents are available
+
+// Populate handoffs arrays - Main receptionist can transfer to all specialists
+(mainAgent.handoffs as any).push(coursesAgent, eventsAgent, culturalAgent);
+
+// Specialists can transfer between each other (no back to main to prevent loops)
+(coursesAgent.handoffs as any).push(eventsAgent, culturalAgent);
+(eventsAgent.handoffs as any).push(coursesAgent, culturalAgent);
+(culturalAgent.handoffs as any).push(coursesAgent, eventsAgent);
 
 // Export the optimized scenario with enhanced agents
 export const optimizedInstitutFrancaisCambodgeScenario = [
