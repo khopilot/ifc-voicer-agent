@@ -153,7 +153,7 @@ function OpenAIApp() {
     }
   };
 
-  const handleTalkButtonDown = (e?: React.MouseEvent | React.TouchEvent) => {
+  const handleTalkButtonDown = () => {
     if (sessionStatus !== 'CONNECTED') return;
     
     // Add haptic feedback on mobile if available
@@ -172,7 +172,7 @@ function OpenAIApp() {
     console.log('PTT: Started speaking (button pressed)');
   };
 
-  const handleTalkButtonUp = (e?: React.MouseEvent | React.TouchEvent) => {
+  const handleTalkButtonUp = () => {
     if (sessionStatus !== 'CONNECTED') return;
     
     // Only process if we were actually speaking
@@ -260,7 +260,7 @@ function OpenAIApp() {
           <div className="hint-text">⬇️ Maintenez le bouton pour parler ⬇️</div>
         )}
         {sessionStatus === "CONNECTED" && isPTTUserSpeaking && (
-          <div className="hint-text speaking">🔴 En cours d'écoute... Relâchez pour envoyer</div>
+          <div className="hint-text speaking">🔴 En cours d&apos;écoute... Relâchez pour envoyer</div>
         )}
       </div>
 
