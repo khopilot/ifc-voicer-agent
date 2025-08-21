@@ -145,7 +145,16 @@ function OpenAIApp() {
       });
       
       sdkAudioElement.addEventListener('play', () => {
-        console.log('🔊 ✅ Audio started playing!');
+        console.log('🔊 ✅ AUDIO PLAY EVENT FIRED!');
+        console.log('🔊 ✅ This means mobile audio is working!');
+        console.log('🔊 ✅ Audio element state:', {
+          muted: sdkAudioElement.muted,
+          volume: sdkAudioElement.volume,
+          paused: sdkAudioElement.paused,
+          currentTime: sdkAudioElement.currentTime,
+          duration: sdkAudioElement.duration,
+          srcObject: !!sdkAudioElement.srcObject
+        });
         setMobileAudioReady(true);
       });
       
@@ -180,11 +189,13 @@ function OpenAIApp() {
   const { startRecording, stopRecording } = useAudioDownload();
 
   const sendClientEvent = (eventObj: any, eventNameSuffix = "") => {
+    console.log('📡 DEBUG: Sending event:', eventObj.type, eventNameSuffix);
     try {
       sendEvent(eventObj);
       logClientEvent(eventObj, eventNameSuffix);
+      console.log('📡 DEBUG: Event sent successfully');
     } catch (err) {
-      console.error('Failed to send via SDK', err);
+      console.error('📡 ERROR: Failed to send via SDK', err);
     }
   };
 
@@ -323,10 +334,16 @@ function OpenAIApp() {
   const connectToRealtime = async () => {
     if (sessionStatus !== "DISCONNECTED") return;
     setSessionStatus("CONNECTING");
+    
+    console.log('🚀 DEBUG: Connect button clicked - starting connection flow');
+    console.log('🚀 DEBUG: User agent:', navigator.userAgent);
+    console.log('🚀 DEBUG: Is mobile:', /iPhone|iPad|iPod|Android/.test(navigator.userAgent));
 
     try {
       // CRITICAL: Unlock mobile audio with user gesture
+      console.log('🚀 DEBUG: About to unlock mobile audio');
       await unlockMobileAudioWithGesture();
+      console.log('🚀 DEBUG: Mobile audio unlock completed');
       
       const EPHEMERAL_KEY = await fetchEphemeralKey();
       if (!EPHEMERAL_KEY) return;
@@ -340,6 +357,11 @@ function OpenAIApp() {
 
       const guardrail = createModerationGuardrail(institutFrancaisCambodgeCompanyName);
 
+      console.log('🚀 DEBUG: About to connect to OpenAI SDK');
+      console.log('🚀 DEBUG: Audio element:', sdkAudioElement);
+      console.log('🚀 DEBUG: Audio element muted:', sdkAudioElement?.muted);
+      console.log('🚀 DEBUG: Audio element volume:', sdkAudioElement?.volume);
+
       await connect({
         getEphemeralKey: async () => EPHEMERAL_KEY,
         initialAgents: reorderedAgents,
@@ -350,6 +372,8 @@ function OpenAIApp() {
           selectedLanguage,
         },
       });
+      
+      console.log('🚀 DEBUG: OpenAI SDK connected successfully');
       
       // Explicitly ensure audio element is unmuted for playback
       if (sdkAudioElement) {
@@ -403,6 +427,11 @@ function OpenAIApp() {
   const handleTalkButtonDown = () => {
     if (sessionStatus !== 'CONNECTED') return;
     
+    console.log('🎤 DEBUG: PTT button pressed down');
+    console.log('🎤 DEBUG: Session status:', sessionStatus);
+    console.log('🎤 DEBUG: Audio element ready:', !!sdkAudioElement);
+    console.log('🎤 DEBUG: Mobile audio ready:', mobileAudioReady);
+    
     // Add haptic feedback on mobile if available
     if ('vibrate' in navigator) {
       navigator.vibrate(10);
@@ -416,11 +445,14 @@ function OpenAIApp() {
     setIsPTTUserSpeaking(true);
     mute(false); // UNMUTE - Allow microphone input
     
-    console.log('PTT: Started speaking (button pressed)');
+    console.log('🎤 DEBUG: PTT recording started');
   };
 
   const handleTalkButtonUp = () => {
     if (sessionStatus !== 'CONNECTED') return;
+    
+    console.log('🎤 DEBUG: PTT button released');
+    console.log('🎤 DEBUG: Was speaking:', isPTTUserSpeaking);
     
     // Only process if we were actually speaking
     if (!isPTTUserSpeaking) return;
@@ -433,7 +465,14 @@ function OpenAIApp() {
     sendClientEvent({ type: 'input_audio_buffer.commit' }, 'commit PTT');
     sendClientEvent({ type: 'response.create' }, 'trigger AI response');
     
-    console.log('PTT: Stopped speaking (button released) - AI will respond');
+    console.log('🎤 DEBUG: PTT recording stopped - AI should respond soon');
+    console.log('🎤 DEBUG: Audio element at response time:', {
+      muted: sdkAudioElement?.muted,
+      volume: sdkAudioElement?.volume,
+      paused: sdkAudioElement?.paused,
+      srcObject: !!sdkAudioElement?.srcObject,
+      readyState: sdkAudioElement?.readyState
+    });
   };
   
   // Handle mouse leaving the button area (safety)
