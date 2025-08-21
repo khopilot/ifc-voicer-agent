@@ -37,6 +37,7 @@ function OpenAIApp() {
   const [isPTTUserSpeaking, setIsPTTUserSpeaking] = useState<boolean>(false);
   const [selectedLanguage, setSelectedLanguage] = useState<'FR' | 'KH' | 'EN'>('FR');
   const [mobileAudioReady, setMobileAudioReady] = useState<boolean>(false);
+  const [audioUnlocked, setAudioUnlocked] = useState<boolean>(false);
   
   // NUCLEAR MOBILE AUDIO FIX
   const { 
@@ -85,7 +86,7 @@ function OpenAIApp() {
       });
       
       // CRITICAL: Handle MediaStream srcObject changes (WebRTC streams)
-      const handleSrcObjectChange = async () => {
+      const handleSrcObjectChange = () => {
         console.log('🔊 MediaStream srcObject changed');
         console.log('🔊 New srcObject:', sdkAudioElement.srcObject);
         
@@ -101,22 +102,10 @@ function OpenAIApp() {
             console.log('🔊 Audio track readyState:', audioTrack.readyState);
           }
           
-          // Mobile fix: Force play after srcObject is set
-          try {
-            sdkAudioElement.muted = false;
-            sdkAudioElement.volume = 1.0;
-            
-            // Wait for metadata to load before playing (critical for mobile)
-            if (sdkAudioElement.readyState >= 1) {
-              await sdkAudioElement.play();
-              console.log('🔊 ✅ MediaStream playing immediately');
-              setMobileAudioReady(true);
-            } else {
-              console.log('🔊 Waiting for metadata to load...');
-            }
-          } catch (error) {
-            console.log('🔊 MediaStream play failed:', error);
-          }
+          // Configure audio element but don't play - wait for PTT
+          sdkAudioElement.muted = false;
+          sdkAudioElement.volume = 1.0;
+          console.log('🔊 MediaStream ready - will play on PTT press with user gesture');
         }
       };
       
@@ -129,34 +118,17 @@ function OpenAIApp() {
       
       observer.observe(sdkAudioElement, { attributes: true, attributeFilter: ['src'] });
       
-      sdkAudioElement.addEventListener('loadedmetadata', async () => {
-        console.log('🔊 Metadata loaded - attempting mobile play');
-        try {
-          if (sessionStatus === 'CONNECTED' && sdkAudioElement.srcObject) {
-            sdkAudioElement.muted = false;
-            sdkAudioElement.volume = 1.0;
-            await sdkAudioElement.play();
-            console.log('🔊 ✅ Playing after metadata loaded');
-            setMobileAudioReady(true);
-          }
-        } catch (error) {
-          console.log('🔊 Play after metadata failed:', error);
+      sdkAudioElement.addEventListener('loadedmetadata', () => {
+        console.log('🔊 Metadata loaded - ready for manual play on PTT');
+        if (sdkAudioElement.srcObject) {
+          sdkAudioElement.muted = false;
+          sdkAudioElement.volume = 1.0;
+          console.log('🔊 Audio element configured, waiting for user gesture');
         }
       });
       
-      sdkAudioElement.addEventListener('canplay', async () => {
-        console.log('🔊 Can play event - final mobile attempt');
-        try {
-          if (sessionStatus === 'CONNECTED' && !mobileAudioReady) {
-            sdkAudioElement.muted = false;
-            sdkAudioElement.volume = 1.0;
-            await sdkAudioElement.play();
-            console.log('🔊 ✅ Final play attempt succeeded');
-            setMobileAudioReady(true);
-          }
-        } catch (error) {
-          console.log('🔊 Final play attempt failed:', error);
-        }
+      sdkAudioElement.addEventListener('canplay', () => {
+        console.log('🔊 Can play event - audio ready, waiting for PTT to unlock');
       });
       
       sdkAudioElement.addEventListener('play', () => {
@@ -297,14 +269,8 @@ function OpenAIApp() {
     console.log('🚀 DEBUG: Is mobile:', /iPhone|iPad|iPod|Android/.test(navigator.userAgent));
 
     try {
-      // NUCLEAR: Use the nuclear mobile audio unlock
-      console.log('🚀 DEBUG: Starting NUCLEAR mobile audio unlock');
-      await nuclearUnlock();
-      console.log('🚀 DEBUG: NUCLEAR unlock completed');
-      
-      // Also ensure AudioContext is ready
-      await nuclearAudioContext();
-      console.log('🚀 DEBUG: AudioContext ensured');
+      // Don't unlock audio here - wait for user gesture (PTT button)
+      console.log('🚀 DEBUG: Connecting to OpenAI - audio unlock delayed until PTT press');
       
       const EPHEMERAL_KEY = await fetchEphemeralKey();
       if (!EPHEMERAL_KEY) return;
@@ -340,19 +306,7 @@ function OpenAIApp() {
       if (sdkAudioElement) {
         sdkAudioElement.muted = false;
         sdkAudioElement.volume = 1.0;
-        console.log('🔊 Audio element explicitly unmuted for playback');
-        
-        // NUCLEAR: Force play if srcObject is already set (WebRTC stream might be ready)
-        if (sdkAudioElement.srcObject) {
-          console.log('🔊 NUCLEAR: Attempting nuclear force play');
-          const success = await nuclearForcePlay(sdkAudioElement);
-          if (success) {
-            console.log('🔊 ✅ NUCLEAR force play successful!');
-            setMobileAudioReady(true);
-          } else {
-            console.log('🔊 ❌ NUCLEAR force play failed - will retry');
-          }
-        }
+        console.log('🔊 Audio element configured - waiting for PTT to unlock mobile audio');
       }
       
       // Additional debugging after connection
@@ -386,13 +340,33 @@ function OpenAIApp() {
     }
   };
 
-  const handleTalkButtonDown = () => {
+  const handleTalkButtonDown = async () => {
     if (sessionStatus !== 'CONNECTED') return;
     
     console.log('🎤 DEBUG: PTT button pressed down');
     console.log('🎤 DEBUG: Session status:', sessionStatus);
     console.log('🎤 DEBUG: Audio element ready:', !!sdkAudioElement);
     console.log('🎤 DEBUG: Mobile audio ready:', mobileAudioReady);
+    console.log('🎤 DEBUG: Audio unlocked:', audioUnlocked);
+    
+    // NUCLEAR: Unlock mobile audio on first PTT press (real user gesture!)
+    if (!audioUnlocked && /iPhone|iPad|iPod|Android/.test(navigator.userAgent)) {
+      console.log('🔊 NUCLEAR: First PTT press - unlocking mobile audio with user gesture!');
+      await nuclearUnlock();
+      await nuclearAudioContext();
+      
+      // Try to play the audio element if it has a stream
+      if (sdkAudioElement && sdkAudioElement.srcObject) {
+        const success = await nuclearForcePlay(sdkAudioElement);
+        if (success) {
+          console.log('🔊 ✅ NUCLEAR: Audio unlocked and playing!');
+          setMobileAudioReady(true);
+        }
+      }
+      
+      setAudioUnlocked(true);
+      console.log('🔊 NUCLEAR: Mobile audio unlock complete!');
+    }
     
     // Add haptic feedback on mobile if available
     if ('vibrate' in navigator) {

@@ -12,7 +12,6 @@ export function useMobileAudioFix() {
   const [debugLog, setDebugLog] = useState<string[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioElementsRef = useRef<HTMLAudioElement[]>([]);
-  const maxRetries = 5;
 
   const log = (message: string) => {
     console.log(message);
@@ -157,35 +156,6 @@ export function useMobileAudioFix() {
     log('🔊 NUCLEAR: Starting audio element monitoring');
     
     let lastSrcObject: MediaStream | null = null;
-    let playAttempts = 0;
-    
-    const attemptPlay = async () => {
-      if (playAttempts >= maxRetries) {
-        log('🔊 NUCLEAR: Max play attempts reached');
-        return;
-      }
-      
-      playAttempts++;
-      
-      try {
-        // Ensure audio is configured correctly
-        audioElement.muted = false;
-        audioElement.volume = 1.0;
-        
-        // Try to play
-        await audioElement.play();
-        log(`🔊 NUCLEAR: ✅ Audio playing (attempt ${playAttempts})`);
-        setAudioReady(true);
-        playAttempts = 0; // Reset on success
-      } catch (error) {
-        log(`🔊 NUCLEAR: Play attempt ${playAttempts} failed: ${error}`);
-        
-        // Retry with delay
-        if (playAttempts < maxRetries) {
-          setTimeout(attemptPlay, 500 * playAttempts);
-        }
-      }
-    };
     
     // Watch for srcObject changes
     const checkSrcObject = () => {
@@ -205,8 +175,8 @@ export function useMobileAudioFix() {
             // Force track to be enabled
             track.enabled = true;
             
-            // Try to play immediately
-            attemptPlay();
+            // Don't auto-play - wait for user gesture
+            log('🔊 NUCLEAR: Stream ready, waiting for user gesture to play');
           }
         }
       }
@@ -217,13 +187,11 @@ export function useMobileAudioFix() {
     
     // Also listen for events
     audioElement.addEventListener('loadedmetadata', () => {
-      log('🔊 NUCLEAR: loadedmetadata event - attempting play');
-      attemptPlay();
+      log('🔊 NUCLEAR: loadedmetadata event - ready for manual play');
     });
     
     audioElement.addEventListener('canplay', () => {
-      log('🔊 NUCLEAR: canplay event - attempting play');
-      attemptPlay();
+      log('🔊 NUCLEAR: canplay event - ready for manual play');
     });
     
     audioElement.addEventListener('play', () => {
