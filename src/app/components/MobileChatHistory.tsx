@@ -36,11 +36,12 @@ export default function MobileChatHistory({ isVisible, onToggle, sessionStatus }
   };
 
   const formatMessage = (item: TranscriptItem) => {
-    const isBracketed = item.title.startsWith("[") && item.title.endsWith("]");
+    const title = item.title || '';
+    const isBracketed = title.startsWith("[") && title.endsWith("]");
     if (isBracketed) {
-      return item.title.slice(1, -1);
+      return title.slice(1, -1);
     }
-    return item.title;
+    return title;
   };
 
   const formatTime = (timestamp: string) => {

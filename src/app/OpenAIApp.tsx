@@ -16,10 +16,10 @@ import { useRealtimeSession } from "./hooks/useRealtimeSession";
 import { createModerationGuardrail } from "@/app/agentConfigs/guardrails";
 import { allAgentSets } from "@/app/agentConfigs";
 import { institutFrancaisCambodgeScenario, institutFrancaisCambodgeCompanyName } from "@/app/agentConfigs/institutFrancaisCambodge";
-import useAudioDownload from "./hooks/useAudioDownload";
+// import useAudioDownload from "./hooks/useAudioDownload"; // Currently unused
 import { useHandleSessionHistory } from "./hooks/useHandleSessionHistory";
-import { useMobileAudioFix } from "./hooks/useMobileAudioFix";
-import { haptic, hapticManager } from "./utils/hapticManager";
+// import { useMobileAudioFix } from "./hooks/useMobileAudioFix"; // Currently unused in this refactor
+import { haptic } from "./utils/hapticManager";
 
 const sdkScenarioMap: Record<string, RealtimeAgent[]> = {
   institutFrancaisCambodge: institutFrancaisCambodgeScenario,
@@ -63,9 +63,10 @@ function OpenAIAppContent({ selectedLanguage, setSelectedLanguage }: {
     }
   }, [selectedAgentName]);
 
-  const logServerEvent = (event: any, eventNameSuffix?: string) => {
-    return;
-  };
+  // Server event logging (placeholder)
+  // const logServerEvent = (event: any, eventNameSuffix?: string) => {
+  //   return;
+  // };
 
   const nuclearUnlock = async () => {
     if (!sdkAudioElement) return;
@@ -77,7 +78,6 @@ function OpenAIAppContent({ selectedLanguage, setSelectedLanguage }: {
     sdkAudioElement.volume = 1.0;
     
     // Add silent audio
-    const silentAudioData = new Float32Array(1);
     const buffer = new AudioBuffer({ 
       length: 1, 
       sampleRate: 44100, 
@@ -212,8 +212,7 @@ function OpenAIAppContent({ selectedLanguage, setSelectedLanguage }: {
       sdkAudioElement.addEventListener('ended', handleEnded);
       sdkAudioElement.addEventListener('emptied', handleEnded);
       
-      // Mobile audio monitoring
-      const cleanup = useMobileAudioFix(sdkAudioElement);
+      // Mobile audio monitoring (cleanup function from hook)
       
       sdkAudioElement.addEventListener('canplay', () => {
         console.log('🔊 Can play event - audio ready, waiting for PTT to unlock');
@@ -244,14 +243,13 @@ function OpenAIAppContent({ selectedLanguage, setSelectedLanguage }: {
         haptic('audioError');
       });
       
-      // Cleanup observer on unmount
+      // Cleanup event listeners on unmount
       return () => {
-        observer.disconnect();
         sdkAudioElement.removeEventListener('play', handlePlay);
         sdkAudioElement.removeEventListener('pause', handlePause);
         sdkAudioElement.removeEventListener('ended', handleEnded);
         sdkAudioElement.removeEventListener('emptied', handleEnded);
-        if (cleanup) cleanup();
+        // Mobile audio monitoring cleanup handled by hook
       };
     }
   }, [sdkAudioElement, sessionStatus, mobileAudioReady, nuclearMonitor]);
@@ -289,7 +287,10 @@ function OpenAIAppContent({ selectedLanguage, setSelectedLanguage }: {
     },
   });
 
-  const { startRecording, stopRecording } = useAudioDownload();
+  // Audio download hooks (currently unused)
+  // const { startRecording, stopRecording } = useAudioDownload();
+  
+  // Mobile audio fix handled through direct implementation (nuclear methods)
 
   const sendClientEvent = (eventObj: any, eventNameSuffix = "") => {
     console.log('📡 DEBUG: Sending event:', eventObj.type, eventNameSuffix);
@@ -328,7 +329,7 @@ function OpenAIAppContent({ selectedLanguage, setSelectedLanguage }: {
       const lastItem = transcriptItems[transcriptItems.length - 1];
       setLastMessage({
         role: lastItem.role || 'user',
-        title: lastItem.formatted?.transcript || lastItem.formatted?.text || lastItem.text || '',
+        title: lastItem.title || '',
       });
     }
   }, [transcriptItems]);
@@ -409,6 +410,12 @@ function OpenAIAppContent({ selectedLanguage, setSelectedLanguage }: {
       console.log('🌐 DEBUG: Language context being passed:', selectedLanguage);
       console.log('🤖 DEBUG: Agents in scenario:', reorderedAgents.map(a => a.name));
       
+      if (!sdkAudioElement) {
+        console.error('❌ No audio element available for connection');
+        setSessionStatus("DISCONNECTED");
+        return;
+      }
+
       await connect({
         getEphemeralKey: async () => EPHEMERAL_KEY,
         initialAgents: reorderedAgents,
@@ -546,8 +553,9 @@ function OpenAIAppContent({ selectedLanguage, setSelectedLanguage }: {
       
       {/* Chat History */}
       <MobileChatHistory 
-        isExpanded={isChatExpanded}
+        isVisible={isChatExpanded}
         onToggle={() => setIsChatExpanded(!isChatExpanded)}
+        sessionStatus={sessionStatus}
       />
 
       {/* Header */}
@@ -713,11 +721,11 @@ function OpenAIAppContent({ selectedLanguage, setSelectedLanguage }: {
           <div>Monitor: {nuclearMonitor}</div>
           {sdkAudioElement && (
             <>
-              <div>Muted: {sdkAudioElement.muted ? '🔇' : '🔊'}</div>
-              <div>Volume: {sdkAudioElement.volume}</div>
-              <div>Paused: {sdkAudioElement.paused ? '⏸️' : '▶️'}</div>
-              <div>Ready: {sdkAudioElement.readyState}</div>
-              <div>Src: {sdkAudioElement.srcObject ? '✅' : '❌'}</div>
+              <div>Muted: {sdkAudioElement?.muted ? '🔇' : '🔊'}</div>
+              <div>Volume: {sdkAudioElement?.volume}</div>
+              <div>Paused: {sdkAudioElement?.paused ? '⏸️' : '▶️'}</div>
+              <div>Ready: {sdkAudioElement?.readyState}</div>
+              <div>Src: {sdkAudioElement?.srcObject ? '✅' : '❌'}</div>
             </>
           )}
         </div>

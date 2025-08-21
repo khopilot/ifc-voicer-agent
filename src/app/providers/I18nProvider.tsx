@@ -1,8 +1,8 @@
 "use client";
 
 import { NextIntlClientProvider } from 'next-intl';
-import { ReactNode, useEffect, useState } from 'react';
-import { languageToLocale, type Locale } from '../i18n/config';
+import { ReactNode } from 'react';
+import { languageToLocale } from '../i18n/config';
 
 interface I18nProviderProps {
   children: ReactNode;

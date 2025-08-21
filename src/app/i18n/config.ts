@@ -33,7 +33,11 @@ export async function loadMessages(locale: Locale) {
 
 // Next-intl configuration
 export default getRequestConfig(async ({ requestLocale }) => {
-  const locale = (requestLocale || defaultLocale) as Locale;
+  let locale: Locale = defaultLocale;
+  
+  if (requestLocale && typeof requestLocale === 'string' && locales.includes(requestLocale as Locale)) {
+    locale = requestLocale as Locale;
+  }
   
   if (!locales.includes(locale)) {
     notFound();
