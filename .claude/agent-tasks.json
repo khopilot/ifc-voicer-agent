@@ -1,0 +1,142 @@
+{
+  "tasks": {
+    "explore-codebase": {
+      "description": "Comprehensive codebase exploration and mapping",
+      "agents": ["general-purpose"],
+      "parallel": true,
+      "subtasks": [
+        "Map all React components and their relationships",
+        "Identify API endpoints and data flow",
+        "Document OpenAI Agents SDK usage patterns",
+        "Analyze state management approach",
+        "Review routing structure"
+      ]
+    },
+    "optimize-performance": {
+      "description": "Performance optimization for Next.js app",
+      "agents": ["general-purpose"],
+      "subtasks": [
+        "Analyze bundle size and code splitting",
+        "Optimize image loading and lazy loading",
+        "Review React component render performance",
+        "Check for memory leaks in real-time connections",
+        "Implement caching strategies"
+      ]
+    },
+    "implement-feature": {
+      "description": "Implement new features with OpenAI Agents",
+      "agents": ["llm-finetuning-engineer", "general-purpose"],
+      "requiresApproval": true,
+      "subtasks": [
+        "Design feature architecture",
+        "Implement React components",
+        "Set up API routes",
+        "Integrate OpenAI Agents SDK",
+        "Add error handling and loading states",
+        "Write tests"
+      ]
+    },
+    "security-audit": {
+      "description": "Security audit for the application",
+      "agents": ["general-purpose"],
+      "priority": "high",
+      "subtasks": [
+        "Check for exposed API keys",
+        "Review authentication implementation",
+        "Validate input sanitization",
+        "Check CORS configuration",
+        "Review dependency vulnerabilities"
+      ]
+    },
+    "test-coverage": {
+      "description": "Improve test coverage",
+      "agents": ["general-purpose"],
+      "subtasks": [
+        "Create unit tests for utilities",
+        "Add component tests",
+        "Write integration tests for API",
+        "Set up E2E tests",
+        "Configure test automation"
+      ]
+    },
+    "refactor-components": {
+      "description": "Refactor React components for better maintainability",
+      "agents": ["general-purpose"],
+      "subtasks": [
+        "Extract reusable components",
+        "Implement proper TypeScript types",
+        "Optimize component hierarchy",
+        "Add proper error boundaries",
+        "Improve code organization"
+      ]
+    },
+    "documentation": {
+      "description": "Generate comprehensive documentation",
+      "agents": ["general-purpose"],
+      "subtasks": [
+        "Document API endpoints",
+        "Create component documentation",
+        "Write setup instructions",
+        "Document OpenAI integration",
+        "Add inline code documentation"
+      ]
+    },
+    "deployment-prep": {
+      "description": "Prepare for production deployment",
+      "agents": ["deployment-ops-engineer"],
+      "subtasks": [
+        "Environment variable configuration",
+        "Build optimization",
+        "Set up CI/CD pipeline",
+        "Configure monitoring",
+        "Create deployment scripts"
+      ]
+    },
+    "ai-integration": {
+      "description": "Enhance AI capabilities using OpenAI Agents",
+      "agents": ["llm-finetuning-engineer", "general-purpose"],
+      "subtasks": [
+        "Implement streaming responses",
+        "Add conversation memory",
+        "Create custom agent behaviors",
+        "Optimize token usage",
+        "Add fallback strategies"
+      ]
+    },
+    "data-pipeline": {
+      "description": "Set up data processing pipeline",
+      "agents": ["data-curator-annotator", "pipeline-orchestrator"],
+      "subtasks": [
+        "Design data flow architecture",
+        "Implement data validation",
+        "Set up data transformation",
+        "Create data storage strategy",
+        "Add monitoring and logging"
+      ]
+    }
+  },
+  "workflows": {
+    "new-feature": ["explore-codebase", "implement-feature", "test-coverage", "documentation"],
+    "production-ready": ["security-audit", "optimize-performance", "test-coverage", "deployment-prep"],
+    "ai-enhancement": ["explore-codebase", "ai-integration", "data-pipeline", "test-coverage"],
+    "maintenance": ["refactor-components", "optimize-performance", "documentation"]
+  },
+  "templates": {
+    "component": {
+      "path": ".claude/templates/component.tsx",
+      "description": "React component with TypeScript and hooks"
+    },
+    "api-route": {
+      "path": ".claude/templates/api-route.ts",
+      "description": "Next.js API route with error handling"
+    },
+    "test": {
+      "path": ".claude/templates/test.spec.ts",
+      "description": "Test file template"
+    },
+    "agent-integration": {
+      "path": ".claude/templates/agent-integration.ts",
+      "description": "OpenAI Agents SDK integration template"
+    }
+  }
+}

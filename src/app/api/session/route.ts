@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-export async function GET() {
+export async function POST() {
   try {
     const response = await fetch(
       "https://api.openai.com/v1/realtime/sessions",
@@ -24,4 +24,8 @@ export async function GET() {
       { status: 500 }
     );
   }
+}
+
+export async function GET() {
+  return POST();
 }

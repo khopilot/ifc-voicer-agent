@@ -30,6 +30,8 @@ yarn-error.log*
 
 # Ignore all env files except .env.sample
 .env
+.env.local
+.env*.local
 
 
 # vercel
@@ -39,4 +41,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 todo.md
+
+# Claude Code configuration
+.claude/logs/
+.claude/cache/
+.claude/*.log
+.claude/metrics.db
+.claude/session-*
 

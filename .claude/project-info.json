@@ -1,0 +1,68 @@
+{
+  "detected": {
+    "framework": "Next.js",
+    "version": "15.3.1",
+    "language": "TypeScript",
+    "packageManager": "npm",
+    "react": "19.0.0",
+    "nodeVersion": "20+",
+    "features": [
+      "App Router",
+      "TypeScript",
+      "Tailwind CSS",
+      "ESLint",
+      "OpenAI Agents SDK",
+      "React Markdown",
+      "Radix UI"
+    ]
+  },
+  "dependencies": {
+    "core": [
+      "@openai/agents",
+      "next",
+      "react",
+      "react-dom",
+      "typescript"
+    ],
+    "ui": [
+      "tailwindcss",
+      "@radix-ui/react-icons",
+      "react-markdown"
+    ],
+    "dev": [
+      "eslint",
+      "eslint-config-next",
+      "@types/node",
+      "@types/react"
+    ]
+  },
+  "scripts": {
+    "available": {
+      "dev": "Start development server",
+      "build": "Build for production",
+      "start": "Start production server",
+      "lint": "Run ESLint checks"
+    },
+    "suggested": {
+      "typecheck": "tsc --noEmit",
+      "format": "prettier --write .",
+      "test": "jest",
+      "test:watch": "jest --watch",
+      "analyze": "ANALYZE=true npm run build"
+    }
+  },
+  "structure": {
+    "src/app": "Next.js App Router pages and layouts",
+    "src/components": "Reusable React components",
+    "src/lib": "Utility functions and helpers",
+    "public": "Static assets",
+    "api": "API routes (if using App Router API)"
+  },
+  "conventions": {
+    "components": "PascalCase for component files",
+    "utils": "camelCase for utility functions",
+    "types": "TypeScript interfaces and types",
+    "styling": "Tailwind CSS utility classes",
+    "state": "React hooks for state management"
+  }
+}

@@ -3,8 +3,8 @@ import "./globals.css";
 import "./lib/envSetup";
 
 export const metadata: Metadata = {
-  title: "Realtime API Agents",
-  description: "A demo app from OpenAI.",
+  title: "Institut français du Cambodge - Assistant Vocal",
+  description: "Assistant vocal multilingue (FR/KH/EN) pour l'Institut français du Cambodge à Phnom Penh.",
 };
 
 export default function RootLayout({

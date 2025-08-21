@@ -1,14 +1,14 @@
 import React, { Suspense } from "react";
 import { TranscriptProvider } from "@/app/contexts/TranscriptContext";
 import { EventProvider } from "@/app/contexts/EventContext";
-import App from "./App";
+import OpenAIApp from "./OpenAIApp";
 
 export default function Page() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
       <TranscriptProvider>
         <EventProvider>
-          <App />
+          <OpenAIApp />
         </EventProvider>
       </TranscriptProvider>
     </Suspense>

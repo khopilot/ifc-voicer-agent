@@ -1,0 +1,123 @@
+{
+  "hooks": {
+    "pre-edit": {
+      "enabled": true,
+      "description": "Run before editing files",
+      "commands": [
+        "echo '[PRE-EDIT] Checking file permissions...'",
+        "test -w \"$FILE_PATH\" || echo 'Warning: File may not be writable'"
+      ]
+    },
+    "post-edit": {
+      "enabled": true,
+      "description": "Run after editing files",
+      "commands": [
+        "echo '[POST-EDIT] File updated: $FILE_PATH'",
+        "if [[ \"$FILE_PATH\" == *.ts || \"$FILE_PATH\" == *.tsx ]]; then npm run lint -- \"$FILE_PATH\" 2>/dev/null || true; fi"
+      ]
+    },
+    "pre-commit": {
+      "enabled": true,
+      "description": "Run before git commit",
+      "commands": [
+        "npm run lint",
+        "npm run build"
+      ],
+      "continueOnError": false
+    },
+    "post-commit": {
+      "enabled": false,
+      "description": "Run after successful commit",
+      "commands": [
+        "echo 'Commit successful!'"
+      ]
+    },
+    "pre-test": {
+      "enabled": false,
+      "description": "Run before running tests",
+      "commands": [
+        "npm run build"
+      ]
+    },
+    "post-test": {
+      "enabled": false,
+      "description": "Run after tests complete",
+      "commands": [
+        "echo 'Tests completed with status: $TEST_STATUS'"
+      ]
+    },
+    "pre-build": {
+      "enabled": true,
+      "description": "Run before build",
+      "commands": [
+        "npm run lint",
+        "rm -rf .next/cache"
+      ]
+    },
+    "post-build": {
+      "enabled": true,
+      "description": "Run after build",
+      "commands": [
+        "echo 'Build completed successfully!'",
+        "du -sh .next/ 2>/dev/null || echo 'Build output size unavailable'"
+      ]
+    },
+    "error": {
+      "enabled": true,
+      "description": "Run when an error occurs",
+      "commands": [
+        "echo '[ERROR] Command failed: $COMMAND'",
+        "echo '[ERROR] Exit code: $EXIT_CODE'"
+      ]
+    },
+    "session-start": {
+      "enabled": true,
+      "description": "Run when Claude Code session starts",
+      "commands": [
+        "echo '🚀 Claude Code session started for openai-realtime-agents'",
+        "npm --version && node --version",
+        "git status --short"
+      ]
+    },
+    "session-end": {
+      "enabled": false,
+      "description": "Run when Claude Code session ends",
+      "commands": [
+        "echo '👋 Claude Code session ended'"
+      ]
+    }
+  },
+  "monitoring": {
+    "logFile": ".claude/logs/hooks.log",
+    "metricsEnabled": true,
+    "notifications": {
+      "onError": true,
+      "onSuccess": false,
+      "onLongRunning": true,
+      "thresholdMs": 30000
+    }
+  },
+  "security": {
+    "allowedCommands": [
+      "npm",
+      "node",
+      "git",
+      "echo",
+      "test",
+      "rm",
+      "du"
+    ],
+    "blockedPatterns": [
+      "rm -rf /",
+      "sudo",
+      "chmod 777"
+    ],
+    "environmentCheck": true
+  },
+  "performance": {
+    "timeout": 60000,
+    "maxConcurrent": 3,
+    "cacheResults": true,
+    "cacheTTL": 300
+  }
+}

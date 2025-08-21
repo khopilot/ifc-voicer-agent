@@ -150,6 +150,8 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
       });
 
       await sessionRef.current.connect({ apiKey: ek });
+      // Mute microphone by default - user must use PTT to speak
+      sessionRef.current.mute(true);
       updateStatus('CONNECTED');
     },
     [callbacks, updateStatus],

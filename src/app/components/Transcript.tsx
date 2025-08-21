@@ -7,6 +7,7 @@ import Image from "next/image";
 import { useTranscript } from "@/app/contexts/TranscriptContext";
 import { DownloadIcon, ClipboardCopyIcon } from "@radix-ui/react-icons";
 import { GuardrailChip } from "./GuardrailChip";
+import WelcomeScreen from "./WelcomeScreen";
 
 export interface TranscriptProps {
   userText: string;
@@ -98,9 +99,12 @@ function Transcript({
           ref={transcriptRef}
           className="overflow-auto p-4 flex flex-col gap-y-4 h-full"
         >
-          {[...transcriptItems]
-            .sort((a, b) => a.createdAtMs - b.createdAtMs)
-            .map((item) => {
+          {transcriptItems.length === 0 ? (
+            <WelcomeScreen />
+          ) : (
+            [...transcriptItems]
+              .sort((a, b) => a.createdAtMs - b.createdAtMs)
+              .map((item) => {
               const {
                 itemId,
                 type,
@@ -122,8 +126,8 @@ function Transcript({
               const containerClasses = `flex justify-end flex-col ${
                 isUser ? "items-end" : "items-start"
               }`;
-              const bubbleBase = `max-w-lg p-3 ${
-                isUser ? "bg-gray-900 text-gray-100" : "bg-gray-100 text-black"
+              const bubbleBase = `max-w-lg p-4 rounded-2xl shadow-md transition-all duration-300 hover:shadow-lg ${
+                isUser ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white ml-auto" : "bg-white text-gray-800 mr-auto border border-gray-100"
               }`;
               const isBracketedMessage =
                 title.startsWith("[") && title.endsWith("]");
@@ -206,7 +210,8 @@ function Transcript({
                 </div>
               );
             }
-          })}
+            })
+          )}
         </div>
       </div>
 
