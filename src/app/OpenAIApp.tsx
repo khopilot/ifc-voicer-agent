@@ -35,6 +35,7 @@ function OpenAIApp() {
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>("DISCONNECTED");
   const [isPTTUserSpeaking, setIsPTTUserSpeaking] = useState<boolean>(false);
   const [selectedLanguage, setSelectedLanguage] = useState<'FR' | 'KH' | 'EN'>('FR');
+  const [mobileAudioReady, setMobileAudioReady] = useState<boolean>(false);
   
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const handoffTriggeredRef = useRef(false);
@@ -42,8 +43,17 @@ function OpenAIApp() {
   const sdkAudioElement = React.useMemo(() => {
     if (typeof window === 'undefined') return undefined;
     const el = document.createElement('audio');
-    el.autoplay = true;
+    
+    // Mobile-friendly audio configuration
+    el.autoplay = false; // Disabled for mobile compatibility
+    el.muted = false;
+    el.preload = 'none';
     el.style.display = 'none';
+    
+    // Mobile audio attributes (required for iOS Safari)
+    el.setAttribute('webkit-playsinline', 'true');
+    el.setAttribute('playsinline', 'true');
+    
     document.body.appendChild(el);
     return el;
   }, []);
@@ -51,8 +61,40 @@ function OpenAIApp() {
   useEffect(() => {
     if (sdkAudioElement && !audioElementRef.current) {
       audioElementRef.current = sdkAudioElement;
+      
+      // Add mobile audio event listeners
+      sdkAudioElement.addEventListener('loadstart', () => {
+        console.log('Audio loading started');
+      });
+      
+      sdkAudioElement.addEventListener('canplay', async () => {
+        console.log('Audio can play - attempting to play for mobile');
+        try {
+          // Ensure audio plays on mobile when stream is ready
+          if (sessionStatus === 'CONNECTED') {
+            await sdkAudioElement.play();
+            console.log('Audio playing successfully on mobile');
+          }
+        } catch (error) {
+          console.log('Audio play attempt failed (normal on some mobiles):', error);
+        }
+      });
+      
+      sdkAudioElement.addEventListener('play', () => {
+        console.log('Audio started playing');
+        setMobileAudioReady(true);
+      });
+      
+      sdkAudioElement.addEventListener('pause', () => {
+        console.log('Audio paused');
+      });
+      
+      sdkAudioElement.addEventListener('error', (e) => {
+        console.log('Audio error:', e);
+        setMobileAudioReady(false);
+      });
     }
-  }, [sdkAudioElement]);
+  }, [sdkAudioElement, sessionStatus]);
 
   const {
     connect,
@@ -106,11 +148,46 @@ function OpenAIApp() {
     }
   };
 
+  // Mobile audio unlock function
+  const unlockMobileAudio = async () => {
+    if (!sdkAudioElement) return;
+    
+    try {
+      // Resume AudioContext on mobile (required after user interaction)
+      const audioContext = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (audioContext) {
+        const ctx = new audioContext();
+        if (ctx.state === 'suspended') {
+          await ctx.resume();
+          console.log('AudioContext resumed for mobile');
+        }
+      }
+      
+      // Try to play a silent audio to unlock mobile audio
+      const silentAudio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmYeBTuL0fPTgjMGHm7A7+OZSA0PVqzn77BdGAhBpePhum8hBjiR1/LNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPTgjQGHm7A7+OZSA0PVqzn77BeGQdApeHhum8iBjiR2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPTgjQGHm/A7+OZSA0PVqzn77BeGQdApeHhum8iBjiR2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSA0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSA0PVqzn77BeGQdApeHhum8iAA==');
+      silentAudio.volume = 0;
+      
+      const playPromise = silentAudio.play();
+      if (playPromise !== undefined) {
+        await playPromise.catch(() => {
+          console.log('Silent audio unlock failed - this is normal on some browsers');
+        });
+      }
+      
+      console.log('Mobile audio unlock attempted');
+    } catch (error) {
+      console.log('Mobile audio unlock error (this is usually normal):', error);
+    }
+  };
+
   const connectToRealtime = async () => {
     if (sessionStatus !== "DISCONNECTED") return;
     setSessionStatus("CONNECTING");
 
     try {
+      // Unlock mobile audio on user interaction (connect button press)
+      await unlockMobileAudio();
+      
       const EPHEMERAL_KEY = await fetchEphemeralKey();
       if (!EPHEMERAL_KEY) return;
 
@@ -133,6 +210,8 @@ function OpenAIApp() {
           selectedLanguage,
         },
       });
+      
+      console.log('Connected to realtime with mobile audio support');
     } catch (err) {
       console.error("Error connecting:", err);
       setSessionStatus("DISCONNECTED");
@@ -242,6 +321,14 @@ function OpenAIApp() {
             disabled={sessionStatus === "CONNECTING"}
           />
           <div className={`status-dot-minimal ${sessionStatus === "CONNECTED" ? "connected" : ""}`} />
+          {sessionStatus === "CONNECTED" && (
+            <div 
+              className={`mobile-audio-indicator ${mobileAudioReady ? 'ready' : 'waiting'}`}
+              title={mobileAudioReady ? 'Audio fonctionnel' : 'Audio en attente'}
+            >
+              {mobileAudioReady ? '🔊' : '🔇'}
+            </div>
+          )}
         </div>
       </div>
 

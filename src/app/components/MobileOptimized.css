@@ -156,6 +156,25 @@
     width: 8px !important;
     height: 8px !important;
   }
+
+  /* Mobile Audio Indicator */
+  .mobile-audio-indicator {
+    font-size: 16px !important;
+    margin-left: 8px;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+  }
+
+  .mobile-audio-indicator.ready {
+    opacity: 1;
+    animation: audioReady 0.5s ease;
+  }
+
+  @keyframes audioReady {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
 }
 
 /* Small phones (iPhone SE, older Android) */
