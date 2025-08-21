@@ -1,6 +1,15 @@
 import { NextResponse } from "next/server";
 
 export async function POST() {
+  // Check for API key
+  if (!process.env.OPENAI_API_KEY) {
+    console.error("OPENAI_API_KEY is not set in environment variables");
+    return NextResponse.json(
+      { error: "OPENAI_API_KEY is not configured. Please set it in your environment variables." },
+      { status: 500 }
+    );
+  }
+
   try {
     const response = await fetch(
       "https://api.openai.com/v1/realtime/sessions",
