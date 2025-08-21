@@ -1,0 +1,45 @@
+{
+  "nav": {
+    "home": "Accueil",
+    "courses": "Cours",
+    "events": "Événements",
+    "cultural": "Échanges"
+  },
+  "buttons": {
+    "connect": "Connecter",
+    "disconnect": "Déconnecter",
+    "connecting": "Connexion...",
+    "pushToTalk": "Maintenez pour parler"
+  },
+  "status": {
+    "connected": "Connecté",
+    "disconnected": "Déconnecté",
+    "connecting": "Connexion en cours"
+  },
+  "header": {
+    "title": "Assistant Vocal",
+    "subtitle": "du Cambodge",
+    "brand": "Institut français"
+  },
+  "language": {
+    "french": "Français",
+    "khmer": "ខ្មែរ",
+    "english": "English"
+  },
+  "hints": {
+    "disconnected": "Appuyez sur Connecter pour commencer",
+    "connected": "Dites 'Bonjour' ou maintenez le micro",
+    "speaking": "En cours d'écoute... Relâchez pour envoyer",
+    "processing": "Traitement en cours..."
+  },
+  "audio": {
+    "ready": "Audio fonctionnel",
+    "waiting": "Audio en attente",
+    "mobileWarning": "Pas de son ? Vérifiez que l'interrupteur silencieux est désactivé"
+  },
+  "chat": {
+    "title": "Conversation",
+    "empty": "Appuyez sur le bouton micro pour commencer la conversation",
+    "scrollToBottom": "Voir les derniers messages"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "nav": {
+    "home": "Reception",
+    "courses": "Courses",
+    "events": "Events",
+    "cultural": "Exchanges"
+  },
+  "buttons": {
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "connecting": "Connecting...",
+    "pushToTalk": "Hold to speak"
+  },
+  "status": {
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "connecting": "Connecting"
+  },
+  "header": {
+    "title": "Voice Assistant",
+    "subtitle": "of Cambodia",
+    "brand": "French Institute"
+  },
+  "language": {
+    "french": "Français",
+    "khmer": "ខ្មែរ",
+    "english": "English"
+  },
+  "hints": {
+    "disconnected": "Press Connect to start",
+    "connected": "Say 'Hello' or hold the mic",
+    "speaking": "Listening... Release to send",
+    "processing": "Processing..."
+  },
+  "audio": {
+    "ready": "Audio ready",
+    "waiting": "Audio waiting",
+    "mobileWarning": "No sound? Check that silent switch is off"
+  },
+  "chat": {
+    "title": "Conversation",
+    "empty": "Press the microphone button to start the conversation",
+    "scrollToBottom": "View latest messages"
+  }
+}

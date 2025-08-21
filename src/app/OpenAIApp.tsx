@@ -1,9 +1,11 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
+import { useTranslations } from 'next-intl';
 import VoiceOrbAdvanced from "./components/VoiceOrbAdvanced";
 import IFCLogoWatermark from "./components/IFCLogoWatermark";
 import LanguageSelector from "./components/LanguageSelector";
 import MobileChatHistory from "./components/MobileChatHistory";
+import { I18nProvider } from "./providers/I18nProvider";
 import "./components/OpenAIStyle.css";
 import "./components/MobileOptimized.css";
 import { SessionStatus } from "@/app/types";
@@ -17,140 +19,201 @@ import { institutFrancaisCambodgeScenario, institutFrancaisCambodgeCompanyName }
 import useAudioDownload from "./hooks/useAudioDownload";
 import { useHandleSessionHistory } from "./hooks/useHandleSessionHistory";
 import { useMobileAudioFix } from "./hooks/useMobileAudioFix";
+import { haptic, hapticManager } from "./utils/hapticManager";
 
 const sdkScenarioMap: Record<string, RealtimeAgent[]> = {
   institutFrancaisCambodge: institutFrancaisCambodgeScenario,
 };
 
-const agents = [
-  { id: "mainReceptionist", label: "Accueil" },
-  { id: "courses", label: "Cours" },
-  { id: "events", label: "Événements" },
-  { id: "cultural", label: "Échanges" }
+// Agent configuration will be populated with translations
+const getAgents = (t: any) => [
+  { id: "mainReceptionist", label: t('nav.home') },
+  { id: "courses", label: t('nav.courses') },
+  { id: "events", label: t('nav.events') },
+  { id: "cultural", label: t('nav.cultural') }
 ];
 
-function OpenAIApp() {
+// Inner component that uses translations
+function OpenAIAppContent({ selectedLanguage, setSelectedLanguage }: { 
+  selectedLanguage: 'FR' | 'KH' | 'EN';
+  setSelectedLanguage: (lang: 'FR' | 'KH' | 'EN') => void;
+}) {
+  const t = useTranslations();
   const { addTranscriptBreadcrumb, transcriptItems } = useTranscript();
   const { logClientEvent } = useEvent();
   
   const [selectedAgentName, setSelectedAgentName] = useState<string>("mainReceptionist");
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>("DISCONNECTED");
-  const [isPTTUserSpeaking, setIsPTTUserSpeaking] = useState<boolean>(false);
-  const [isAssistantSpeaking, setIsAssistantSpeaking] = useState<boolean>(false);
-  const [selectedLanguage, setSelectedLanguage] = useState<'FR' | 'KH' | 'EN'>('FR');
-  const [mobileAudioReady, setMobileAudioReady] = useState<boolean>(false);
-  const [audioUnlocked, setAudioUnlocked] = useState<boolean>(false);
-  const [isChatVisible, setIsChatVisible] = useState<boolean>(false);
-  
-  // NUCLEAR MOBILE AUDIO FIX
-  const { 
-    audioReady: nuclearAudioReady,
-    debugLog: audioDebugLog,
-    unlockMobileAudio: nuclearUnlock,
-    monitorAudioElement: nuclearMonitor,
-    forceAudioPlay: nuclearForcePlay,
-    ensureAudioContext: nuclearAudioContext
-  } = useMobileAudioFix();
-  
-  const audioElementRef = useRef<HTMLAudioElement | null>(null);
+  const [sdkAudioElement, setSdkAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [isPTTUserSpeaking, setIsPTTUserSpeaking] = useState(false);
+  const [isChatExpanded, setIsChatExpanded] = useState(false);
+  const [lastMessage, setLastMessage] = useState<{ role: string; title: string } | null>(null);
+  const [nuclearMonitor, setNuclearMonitor] = useState(0);
+  const [mobileAudioReady, setMobileAudioReady] = useState(false);
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [isAssistantSpeaking, setIsAssistantSpeaking] = useState(false);
   const handoffTriggeredRef = useRef(false);
+  
+  const agents = getAgents(t);
 
-  const sdkAudioElement = React.useMemo(() => {
-    if (typeof window === 'undefined') return undefined;
-    const el = document.createElement('audio');
+  // Reset handoff flag when agent selection changes manually
+  useEffect(() => {
+    if (!handoffTriggeredRef.current) {
+      handoffTriggeredRef.current = false;
+    }
+  }, [selectedAgentName]);
+
+  const logServerEvent = (event: any, eventNameSuffix?: string) => {
+    return;
+  };
+
+  const nuclearUnlock = async () => {
+    if (!sdkAudioElement) return;
     
-    // Mobile-friendly audio configuration
-    el.autoplay = false; // Disabled for mobile compatibility
-    el.muted = false;
-    el.preload = 'none';
-    el.style.display = 'none';
+    console.log('🔊 🚀 NUCLEAR: Starting unlock sequence...');
     
-    // Mobile audio attributes (required for iOS Safari)
-    el.setAttribute('webkit-playsinline', 'true');
-    el.setAttribute('playsinline', 'true');
+    // Force unmute
+    sdkAudioElement.muted = false;
+    sdkAudioElement.volume = 1.0;
     
-    document.body.appendChild(el);
-    return el;
+    // Add silent audio
+    const silentAudioData = new Float32Array(1);
+    const buffer = new AudioBuffer({ 
+      length: 1, 
+      sampleRate: 44100, 
+      numberOfChannels: 1 
+    });
+    
+    try {
+      const audioContext = new AudioContext();
+      const source = audioContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioContext.destination);
+      source.start();
+      console.log('🔊 🚀 NUCLEAR: Played silent audio to wake up mobile audio system');
+    } catch (e) {
+      console.log('🔊 🚀 NUCLEAR: Silent audio failed, but continuing...', e);
+    }
+    
+    setNuclearMonitor(prev => prev + 1);
+  };
+
+  const nuclearAudioContext = async () => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+        console.log('🔊 🚀 NUCLEAR: AudioContext resumed');
+      }
+      
+      // Create and play a silent buffer
+      const buffer = audioContext.createBuffer(1, 1, 22050);
+      const source = audioContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioContext.destination);
+      source.start(0);
+      
+      console.log('🔊 🚀 NUCLEAR: Created AudioContext and played silent buffer');
+      return audioContext;
+    } catch (e) {
+      console.log('🔊 🚀 NUCLEAR: AudioContext creation failed:', e);
+      return null;
+    }
+  };
+
+  const nuclearForcePlay = async (element: HTMLAudioElement) => {
+    console.log('🔊 🚀 NUCLEAR: Force playing audio element...');
+    element.muted = false;
+    element.volume = 1.0;
+    
+    try {
+      const playPromise = element.play();
+      if (playPromise !== undefined) {
+        await playPromise;
+        console.log('🔊 🚀 NUCLEAR: Audio element playing successfully!');
+        return true;
+      }
+    } catch (e) {
+      console.log('🔊 🚀 NUCLEAR: Play failed but might work later:', e);
+      
+      // Try alternative approach
+      element.load();
+      setTimeout(() => {
+        element.play().catch(e2 => console.log('🔊 NUCLEAR: Retry play failed:', e2));
+      }, 100);
+    }
+    return false;
+  };
+
+  // Find SDK audio element
+  useEffect(() => {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node instanceof HTMLAudioElement) {
+            console.log('🔊 FOUND SDK AUDIO ELEMENT!', node);
+            setSdkAudioElement(node);
+            
+            // Configure immediately
+            node.muted = false;
+            node.volume = 1.0;
+            node.setAttribute('playsinline', 'true');
+            node.setAttribute('autoplay', 'true');
+            
+            console.log('🔊 Configured SDK audio element:', {
+              muted: node.muted,
+              volume: node.volume,
+              playsinline: node.getAttribute('playsinline'),
+              autoplay: node.getAttribute('autoplay')
+            });
+          }
+        });
+      });
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+
+    return () => observer.disconnect();
   }, []);
 
+  // Setup audio element event listeners
   useEffect(() => {
-    if (sdkAudioElement && !audioElementRef.current) {
-      audioElementRef.current = sdkAudioElement;
+    if (sdkAudioElement && sessionStatus === "CONNECTED") {
+      console.log('🔊 Setting up audio element listeners');
       
-      // NUCLEAR: Start monitoring this audio element
-      console.log('🔊 NUCLEAR: Starting nuclear audio monitoring');
-      const cleanup = nuclearMonitor(sdkAudioElement);
-      
-      // Add mobile MediaStream-specific event listeners
-      sdkAudioElement.addEventListener('loadstart', () => {
-        console.log('🔊 Audio loading started');
-        console.log('🔊 Audio src:', sdkAudioElement.src);
-        console.log('🔊 Audio srcObject:', sdkAudioElement.srcObject);
-      });
-      
-      // CRITICAL: Handle MediaStream srcObject changes (WebRTC streams)
-      const handleSrcObjectChange = () => {
-        console.log('🔊 MediaStream srcObject changed');
-        console.log('🔊 New srcObject:', sdkAudioElement.srcObject);
-        
-        if (sdkAudioElement.srcObject) {
-          const stream = sdkAudioElement.srcObject as MediaStream;
-          console.log('🔊 MediaStream active:', stream.active);
-          console.log('🔊 MediaStream audio tracks:', stream.getAudioTracks().length);
-          
-          if (stream.getAudioTracks().length > 0) {
-            const audioTrack = stream.getAudioTracks()[0];
-            console.log('🔊 Audio track enabled:', audioTrack.enabled);
-            console.log('🔊 Audio track muted:', audioTrack.muted);
-            console.log('🔊 Audio track readyState:', audioTrack.readyState);
-          }
-          
-          // Configure audio element but don't play - wait for PTT
-          sdkAudioElement.muted = false;
-          sdkAudioElement.volume = 1.0;
-          console.log('🔊 MediaStream ready - will play on PTT press with user gesture');
-        }
-      };
-      
-      // Monitor assistant speaking state
+      // Track assistant speaking state
       const handlePlay = () => {
-        console.log('🔊 Assistant started speaking');
+        console.log('🎵 Assistant started speaking');
         setIsAssistantSpeaking(true);
+        // Subtle haptic feedback when assistant starts speaking
+        haptic('assistantStartSpeaking');
       };
-
+      
       const handlePause = () => {
-        console.log('🔊 Assistant stopped speaking');
+        console.log('🎵 Assistant paused speaking');
         setIsAssistantSpeaking(false);
+        // Gentle haptic feedback when assistant stops
+        haptic('assistantStopSpeaking');
       };
-
+      
       const handleEnded = () => {
-        console.log('🔊 Assistant audio ended');
+        console.log('🎵 Assistant finished speaking');
         setIsAssistantSpeaking(false);
+        // Gentle haptic feedback when assistant finishes
+        haptic('assistantStopSpeaking');
       };
-
-      // Add event listeners for audio playback
+      
       sdkAudioElement.addEventListener('play', handlePlay);
       sdkAudioElement.addEventListener('pause', handlePause);
       sdkAudioElement.addEventListener('ended', handleEnded);
       sdkAudioElement.addEventListener('emptied', handleEnded);
-
-      // Watch for srcObject changes (this is when WebRTC stream arrives)
-      const observer = new MutationObserver(() => {
-        if (sdkAudioElement.srcObject && !mobileAudioReady) {
-          handleSrcObjectChange();
-        }
-      });
       
-      observer.observe(sdkAudioElement, { attributes: true, attributeFilter: ['src'] });
-      
-      sdkAudioElement.addEventListener('loadedmetadata', () => {
-        console.log('🔊 Metadata loaded - ready for manual play on PTT');
-        if (sdkAudioElement.srcObject) {
-          sdkAudioElement.muted = false;
-          sdkAudioElement.volume = 1.0;
-          console.log('🔊 Audio element configured, waiting for user gesture');
-        }
-      });
+      // Mobile audio monitoring
+      const cleanup = useMobileAudioFix(sdkAudioElement);
       
       sdkAudioElement.addEventListener('canplay', () => {
         console.log('🔊 Can play event - audio ready, waiting for PTT to unlock');
@@ -177,6 +240,8 @@ function OpenAIApp() {
       sdkAudioElement.addEventListener('error', (e) => {
         console.log('🔊 ❌ Audio error:', e);
         setMobileAudioReady(false);
+        // Haptic feedback for audio errors
+        haptic('audioError');
       });
       
       // Cleanup observer on unmount
@@ -198,8 +263,27 @@ function OpenAIApp() {
     interrupt,
     mute,
   } = useRealtimeSession({
-    onConnectionChange: (s) => setSessionStatus(s as SessionStatus),
+    onConnectionChange: (s) => {
+      const newStatus = s as SessionStatus;
+      setSessionStatus(newStatus);
+      
+      // Haptic feedback for connection state changes
+      if (newStatus === "CONNECTED") {
+        haptic('connectSuccess');
+        console.log('🔸 Haptic: Connection success');
+      } else if (newStatus === "DISCONNECTED") {
+        haptic('disconnect');
+        console.log('🔸 Haptic: Disconnected');
+      }
+    },
     onAgentHandoff: (agentName: string) => {
+      console.log('🎯 UI: Agent handoff received, switching to:', agentName);
+      console.log('🌐 UI: Current language context:', selectedLanguage);
+      
+      // Haptic feedback for agent transitions
+      haptic('agentHandoff');
+      console.log('🔸 Haptic: Agent handoff');
+      
       handoffTriggeredRef.current = true;
       setSelectedAgentName(agentName);
     },
@@ -230,70 +314,71 @@ function OpenAIApp() {
     try {
       const resp = await fetch("/api/session", { method: "POST" });
       const data = await resp.json();
-      
-      if (!data.client_secret?.value) {
-        console.error("No ephemeral key provided by the server");
-        setSessionStatus("DISCONNECTED");
-        return null;
-      }
-      
-      return data.client_secret.value;
-    } catch (err) {
-      console.error("Failed to fetch ephemeral key:", err);
-      setSessionStatus("DISCONNECTED");
+      return data.ephemeral_key ?? data.client_secret?.value ?? null;
+    } catch (e) {
+      console.error("Failed to fetch ephemeral key:", e);
+      alert("Failed to fetch ephemeral key. Check your environment variables.");
       return null;
     }
   };
 
-  // Mobile audio unlock function (legacy - now using gesture-based version)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const unlockMobileAudio = async () => {
-    if (!sdkAudioElement) return;
-    
-    try {
-      // Resume AudioContext on mobile (required after user interaction)
-      const audioContext = (window as any).AudioContext || (window as any).webkitAudioContext;
-      if (audioContext) {
-        const ctx = new audioContext();
-        if (ctx.state === 'suspended') {
-          await ctx.resume();
-          console.log('AudioContext resumed for mobile');
-        }
+  // Get last message from transcript
+  useEffect(() => {
+    if (transcriptItems.length > 0) {
+      const lastItem = transcriptItems[transcriptItems.length - 1];
+      setLastMessage({
+        role: lastItem.role || 'user',
+        title: lastItem.formatted?.transcript || lastItem.formatted?.text || lastItem.text || '',
+      });
+    }
+  }, [transcriptItems]);
+
+  // Agent switch handler  
+  const handleAgentSwitch = (agentName: string) => {
+    if (sessionStatus === "CONNECTED") {
+      console.log('🔄 DEBUG: Switching agent to:', agentName);
+      
+      // Don't trigger handoff if this was already triggered by an actual handoff event
+      if (handoffTriggeredRef.current) {
+        handoffTriggeredRef.current = false;
+        return;
       }
       
-      // Try to play a silent audio to unlock mobile audio
-      const silentAudio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmYeBTuL0fPTgjMGHm7A7+OZSA0PVqzn77BdGAhBpePhum8hBjiR1/LNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPTgjQGHm7A7+OZSA0PVqzn77BeGQdApeHhum8iBjiR2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPTgjQGHm/A7+OZSA0PVqzn77BeGQdApeHhum8iBjiR2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSA0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSA0PVqzn77BeGQdApeHhum8iAA==');
-      silentAudio.volume = 0;
+      const targetAgent = allAgentSets["institutFrancaisCambodge"].find(a => a.name === agentName);
       
-      const playPromise = silentAudio.play();
-      if (playPromise !== undefined) {
-        await playPromise.catch(() => {
-          console.log('Silent audio unlock failed - this is normal on some browsers');
-        });
+      if (targetAgent) {
+        console.log('🔄 DEBUG: Found target agent:', targetAgent.name);
+        
+        // Trigger handoff via message with context
+        const handoffMessage = `Please transfer me to the ${agentName} agent. Context: User selected language is ${selectedLanguage}`;
+        console.log('🔄 DEBUG: Sending handoff message:', handoffMessage);
+        
+        interrupt();
+        sendClientEvent({
+          type: "conversation.item.create",
+          item: {
+            type: "message",
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: handoffMessage
+              }
+            ]
+          }
+        }, "manual_handoff");
+        
+        sendClientEvent({ type: "response.create" }, "trigger_handoff");
       }
-      
-      // Additional mobile debugging
-      console.log('🔊 MOBILE AUDIO UNLOCK ATTEMPTED');
-      console.log('🔊 User Agent:', navigator.userAgent);
-      console.log('🔊 Is iOS:', /iPhone|iPad|iPod/.test(navigator.userAgent));
-      console.log('🔊 Audio element muted:', sdkAudioElement.muted);
-      console.log('🔊 Audio element volume:', sdkAudioElement.volume);
-      
-      if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
-        console.log('🔊 ⚠️  iOS DETECTED: CHECK SILENT SWITCH!');
-        console.log('🔊 ⚠️  iOS: Audio won\'t play if device is in silent mode');
-      }
-    } catch (error) {
-      console.log('Mobile audio unlock error (this is usually normal):', error);
+    } else {
+      setSelectedAgentName(agentName);
     }
   };
 
 
-  const connectToRealtime = async () => {
-    if (sessionStatus !== "DISCONNECTED") return;
-    setSessionStatus("CONNECTING");
-    
-    console.log('🚀 DEBUG: Connect button clicked - starting connection flow');
+  // Core connection logic that can be reused
+  const onConnectCore = async () => {
+    console.log('🚀 DEBUG: Starting connection flow');
     console.log('🚀 DEBUG: User agent:', navigator.userAgent);
     console.log('🚀 DEBUG: Is mobile:', /iPhone|iPad|iPod|Android/.test(navigator.userAgent));
 
@@ -302,7 +387,10 @@ function OpenAIApp() {
       console.log('🚀 DEBUG: Connecting to OpenAI - audio unlock delayed until PTT press');
       
       const EPHEMERAL_KEY = await fetchEphemeralKey();
-      if (!EPHEMERAL_KEY) return;
+      if (!EPHEMERAL_KEY) {
+        setSessionStatus("DISCONNECTED");
+        return;
+      }
 
       const reorderedAgents = [...sdkScenarioMap["institutFrancaisCambodge"]];
       const idx = reorderedAgents.findIndex((a) => a.name === selectedAgentName);
@@ -318,6 +406,9 @@ function OpenAIApp() {
       console.log('🚀 DEBUG: Audio element muted:', sdkAudioElement?.muted);
       console.log('🚀 DEBUG: Audio element volume:', sdkAudioElement?.volume);
 
+      console.log('🌐 DEBUG: Language context being passed:', selectedLanguage);
+      console.log('🤖 DEBUG: Agents in scenario:', reorderedAgents.map(a => a.name));
+      
       await connect({
         getEphemeralKey: async () => EPHEMERAL_KEY,
         initialAgents: reorderedAgents,
@@ -352,7 +443,15 @@ function OpenAIApp() {
     } catch (err) {
       console.error("Error connecting:", err);
       setSessionStatus("DISCONNECTED");
+      // Haptic feedback for connection errors
+      haptic('connectionError');
     }
+  };
+  
+  const connectToRealtime = async () => {
+    if (sessionStatus !== "DISCONNECTED") return;
+    setSessionStatus("CONNECTING");
+    await onConnectCore();
   };
 
   const disconnectFromRealtime = () => {
@@ -390,6 +489,8 @@ function OpenAIApp() {
         if (success) {
           console.log('🔊 ✅ NUCLEAR: Audio unlocked and playing!');
           setMobileAudioReady(true);
+          // Haptic feedback for successful audio unlock
+          haptic('audioUnlockSuccess');
         }
       }
       
@@ -397,10 +498,8 @@ function OpenAIApp() {
       console.log('🔊 NUCLEAR: Mobile audio unlock complete!');
     }
     
-    // Add haptic feedback on mobile if available
-    if ('vibrate' in navigator) {
-      navigator.vibrate(10);
-    }
+    // Enhanced haptic feedback for PTT press
+    haptic('pttPress');
     
     // Clear any previous audio and start fresh
     interrupt();
@@ -414,87 +513,60 @@ function OpenAIApp() {
   };
 
   const handleTalkButtonUp = () => {
-    if (sessionStatus !== 'CONNECTED') return;
+    if (sessionStatus !== 'CONNECTED' || !isPTTUserSpeaking) return;
     
     console.log('🎤 DEBUG: PTT button released');
-    console.log('🎤 DEBUG: Was speaking:', isPTTUserSpeaking);
     
-    // Only process if we were actually speaking
-    if (!isPTTUserSpeaking) return;
+    // Enhanced haptic feedback for PTT release
+    haptic('pttRelease');
     
     // STOP RECORDING - User released the button
     setIsPTTUserSpeaking(false);
-    mute(true); // MUTE - Stop microphone input immediately
+    mute(true); // MUTE - Stop microphone input
     
-    // Send the audio to AI for processing
-    sendClientEvent({ type: 'input_audio_buffer.commit' }, 'commit PTT');
-    sendClientEvent({ type: 'response.create' }, 'trigger AI response');
+    // Commit the audio buffer to send to the model
+    sendClientEvent({ type: 'input_audio_buffer.commit' }, 'commit PTT audio');
     
-    console.log('🎤 DEBUG: PTT recording stopped - AI should respond soon');
-    console.log('🎤 DEBUG: Audio element at response time:', {
-      muted: sdkAudioElement?.muted,
-      volume: sdkAudioElement?.volume,
-      paused: sdkAudioElement?.paused,
-      srcObject: !!sdkAudioElement?.srcObject,
-      readyState: sdkAudioElement?.readyState
-    });
+    // Trigger a response from the model
+    sendClientEvent({ type: 'response.create' }, 'create PTT response');
+    
+    console.log('🎤 DEBUG: PTT recording stopped and committed');
   };
-  
-  // Handle mouse leaving the button area (safety)
+
   const handleTalkButtonLeave = () => {
     if (isPTTUserSpeaking) {
-      // User's mouse/finger left the button - stop recording
-      setIsPTTUserSpeaking(false);
-      mute(true);
-      sendClientEvent({ type: 'input_audio_buffer.commit' }, 'commit PTT on leave');
-      sendClientEvent({ type: 'response.create' }, 'trigger AI response on leave');
-      console.log('PTT: Emergency stop (mouse/touch left button)');
+      console.log('🎤 DEBUG: PTT button left area - stopping recording');
+      handleTalkButtonUp();
     }
   };
-
-  const handleAgentSelect = (agentId: string) => {
-    if (sessionStatus === "CONNECTED") {
-      disconnectFromRealtime();
-    }
-    setSelectedAgentName(agentId);
-  };
-
-  useEffect(() => {
-    if (sessionStatus === "CONNECTED" && audioElementRef.current?.srcObject) {
-      const remoteStream = audioElementRef.current.srcObject as MediaStream;
-      startRecording(remoteStream);
-    }
-    return () => {
-      stopRecording();
-    };
-  }, [sessionStatus]);
-
-  // Get last transcript message
-  const lastMessage = transcriptItems
-    .filter(item => item.type === "MESSAGE" && !item.isHidden)
-    .slice(-1)[0];
 
   return (
     <div className="openai-container">
       <IFCLogoWatermark />
       
-      {/* Enhanced Header */}
+      {/* Chat History */}
+      <MobileChatHistory 
+        isExpanded={isChatExpanded}
+        onToggle={() => setIsChatExpanded(!isChatExpanded)}
+      />
+
+      {/* Header */}
       <div className="openai-header">
         <div className="header-left">
           <div className="brand-mark">
             <div className="brand-logo">🇫🇷</div>
             <div className="brand-text-container">
-              <span className="brand-text">Institut français</span>
-              <span className="brand-subtitle">du Cambodge</span>
+              <span className="brand-text">{t('header.brand')}</span>
+              <span className="brand-subtitle">{t('header.subtitle')}</span>
             </div>
           </div>
           <div className="header-separator"></div>
           <div className="app-title">
-            <span className="app-title-text">Assistant Vocal</span>
+            <span className="app-title-text">{t('header.title')}</span>
             <div className={`app-status ${sessionStatus.toLowerCase()}`}>
-              {sessionStatus === "CONNECTED" && "En ligne"}
-              {sessionStatus === "CONNECTING" && "Connexion..."}
-              {sessionStatus === "DISCONNECTED" && "Hors ligne"}
+              {sessionStatus === "CONNECTED" && t('status.connected')}
+              {sessionStatus === "CONNECTING" && t('status.connecting')}
+              {sessionStatus === "DISCONNECTED" && t('status.disconnected')}
             </div>
           </div>
         </div>
@@ -502,7 +574,37 @@ function OpenAIApp() {
           <div className="header-controls">
             <LanguageSelector 
               selectedLanguage={selectedLanguage}
-              onLanguageChange={setSelectedLanguage}
+              onLanguageChange={async (lang) => {
+                console.log('🌐 Language changed to:', lang);
+                setSelectedLanguage(lang);
+                
+                // Haptic feedback for language change
+                haptic('languageSwitch');
+                
+                // If connected, disconnect and reconnect with new language context
+                if (sessionStatus === "CONNECTED") {
+                  console.log('🔄 Reconnecting with new language context:', lang);
+                  // Store current agent before disconnecting
+                  const currentAgent = selectedAgentName;
+                  
+                  // Disconnect current session
+                  disconnect();
+                  
+                  // Wait a moment for cleanup
+                  await new Promise(resolve => setTimeout(resolve, 100));
+                  
+                  // Reconnect with new language context
+                  await onConnectCore();
+                  
+                  // If not on main agent, switch back to the same agent
+                  if (currentAgent !== 'mainReceptionist') {
+                    setSelectedAgentName(currentAgent);
+                  }
+                } else if (sessionStatus === "DISCONNECTED") {
+                  // If not connected, the new language will be used on next connection
+                  console.log('📝 Language preference saved for next connection');
+                }
+              }}
               disabled={sessionStatus === "CONNECTING"}
             />
             <div className="status-indicators">
@@ -510,7 +612,7 @@ function OpenAIApp() {
               {sessionStatus === "CONNECTED" && (
                 <div 
                   className={`mobile-audio-indicator ${mobileAudioReady ? 'ready' : 'waiting'}`}
-                  title={mobileAudioReady ? 'Audio fonctionnel' : 'Audio en attente'}
+                  title={mobileAudioReady ? t('audio.ready') : t('audio.waiting')}
                 >
                   {mobileAudioReady ? '🔊' : '🔇'}
                 </div>
@@ -531,17 +633,17 @@ function OpenAIApp() {
         
         {/* Hint text */}
         {sessionStatus === "DISCONNECTED" && (
-          <div className="hint-text">Cliquez sur connecter pour commencer</div>
+          <div className="hint-text">{t('hints.disconnected')}</div>
         )}
         {sessionStatus === "CONNECTED" && !isPTTUserSpeaking && (
-          <div className="hint-text">⬇️ Maintenez le bouton pour parler ⬇️</div>
+          <div className="hint-text">⬇️ {t('buttons.pushToTalk')} ⬇️</div>
         )}
         {sessionStatus === "CONNECTED" && isPTTUserSpeaking && (
-          <div className="hint-text speaking">🔴 En cours d&apos;écoute... Relâchez pour envoyer</div>
+          <div className="hint-text speaking">🔴 {t('hints.speaking')}</div>
         )}
         {sessionStatus === "CONNECTED" && !mobileAudioReady && /iPhone|iPad|iPod|Android/.test(navigator.userAgent) && (
           <div className="hint-text warning" style={{color: '#e74c3c', fontSize: '12px', marginTop: '8px'}}>
-            📱 Pas de son ? Vérifiez que l&apos;interrupteur silencieux est désactivé
+            📱 {t('audio.mobileWarning')}
           </div>
         )}
       </div>
@@ -566,7 +668,7 @@ function OpenAIApp() {
             onTouchEnd={handleTalkButtonUp}
             onTouchCancel={handleTalkButtonLeave}
             className={`ptt-hold ${isPTTUserSpeaking ? 'speaking' : ''}`}
-            title="Maintenez pour parler"
+            title={t('buttons.pushToTalk')}
             aria-label="Push to talk"
             type="button"
           >
@@ -581,8 +683,8 @@ function OpenAIApp() {
         className={`connect-minimal ${sessionStatus === "CONNECTED" ? "connected" : ""}`}
         disabled={sessionStatus === "CONNECTING"}
       >
-        {sessionStatus === "CONNECTED" ? "Déconnecter" : 
-         sessionStatus === "CONNECTING" ? "Connexion..." : "Connecter"}
+        {sessionStatus === "CONNECTED" ? t('buttons.disconnect') : 
+         sessionStatus === "CONNECTING" ? t('buttons.connecting') : t('buttons.connect')}
       </button>
 
       {/* NUCLEAR AUDIO DEBUG PANEL - Development Only */}
@@ -594,39 +696,45 @@ function OpenAIApp() {
           right: '10px',
           maxHeight: '150px',
           overflow: 'auto',
-          background: 'rgba(0,0,0,0.8)',
+          background: 'rgba(0,0,0,0.9)',
           color: '#00ff00',
+          padding: '10px',
           fontSize: '10px',
-          padding: '5px',
-          borderRadius: '5px',
           fontFamily: 'monospace',
-          zIndex: 9999,
-          display: audioDebugLog.length > 0 ? 'block' : 'none'
+          borderRadius: '8px',
+          zIndex: 10000
         }}>
-          <div style={{color: '#ffff00', fontWeight: 'bold'}}>🔊 NUCLEAR AUDIO DEBUG:</div>
-          {audioDebugLog.slice(-10).map((log, i) => (
-            <div key={i} style={{marginTop: '2px'}}>{log}</div>
-          ))}
-          <div style={{color: nuclearAudioReady ? '#00ff00' : '#ff0000', fontWeight: 'bold', marginTop: '5px'}}>
-            STATUS: {nuclearAudioReady ? '✅ AUDIO READY' : '❌ AUDIO NOT READY'}
-          </div>
+          <div>🔊 NUCLEAR AUDIO DEBUG</div>
+          <div>Session: {sessionStatus}</div>
+          <div>SDK Element: {sdkAudioElement ? '✅' : '❌'}</div>
+          <div>Mobile Ready: {mobileAudioReady ? '✅' : '❌'}</div>
+          <div>Unlocked: {audioUnlocked ? '✅' : '❌'}</div>
+          <div>PTT Speaking: {isPTTUserSpeaking ? '✅' : '❌'}</div>
+          <div>Monitor: {nuclearMonitor}</div>
+          {sdkAudioElement && (
+            <>
+              <div>Muted: {sdkAudioElement.muted ? '🔇' : '🔊'}</div>
+              <div>Volume: {sdkAudioElement.volume}</div>
+              <div>Paused: {sdkAudioElement.paused ? '⏸️' : '▶️'}</div>
+              <div>Ready: {sdkAudioElement.readyState}</div>
+              <div>Src: {sdkAudioElement.srcObject ? '✅' : '❌'}</div>
+            </>
+          )}
         </div>
       )}
 
-      {/* Mobile Chat History */}
-      <MobileChatHistory 
-        isVisible={isChatVisible}
-        onToggle={() => setIsChatVisible(!isChatVisible)}
-        sessionStatus={sessionStatus}
-      />
-
-      {/* Agent Pills */}
+      {/* Agent Navigation */}
       <div className="agent-pills">
         {agents.map((agent) => (
           <button
             key={agent.id}
-            className={`agent-pill ${selectedAgentName === agent.id ? "active" : ""}`}
-            onClick={() => handleAgentSelect(agent.id)}
+            onClick={() => {
+              handleAgentSwitch(agent.id);
+              // Haptic feedback for navigation
+              haptic('navigationTap');
+            }}
+            className={`agent-pill ${selectedAgentName === agent.id ? 'active' : ''}`}
+            disabled={sessionStatus === "CONNECTING"}
           >
             {agent.label}
           </button>
@@ -636,4 +744,16 @@ function OpenAIApp() {
   );
 }
 
-export default OpenAIApp;
+// Main wrapper component
+export default function OpenAIApp() {
+  const [selectedLanguage, setSelectedLanguage] = useState<'FR' | 'KH' | 'EN'>('FR');
+  
+  return (
+    <I18nProvider selectedLanguage={selectedLanguage}>
+      <OpenAIAppContent 
+        selectedLanguage={selectedLanguage}
+        setSelectedLanguage={setSelectedLanguage}
+      />
+    </I18nProvider>
+  );
+}
