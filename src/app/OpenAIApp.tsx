@@ -64,7 +64,9 @@ function OpenAIApp() {
       
       // Add mobile audio event listeners
       sdkAudioElement.addEventListener('loadstart', () => {
-        console.log('Audio loading started');
+        console.log('🔊 Audio loading started');
+        console.log('🔊 Audio src:', sdkAudioElement.src);
+        console.log('🔊 Audio srcObject:', sdkAudioElement.srcObject);
       });
       
       sdkAudioElement.addEventListener('canplay', async () => {
@@ -177,7 +179,17 @@ function OpenAIApp() {
         });
       }
       
-      console.log('Mobile audio unlock attempted');
+      // Additional mobile debugging
+      console.log('🔊 MOBILE AUDIO UNLOCK ATTEMPTED');
+      console.log('🔊 User Agent:', navigator.userAgent);
+      console.log('🔊 Is iOS:', /iPhone|iPad|iPod/.test(navigator.userAgent));
+      console.log('🔊 Audio element muted:', sdkAudioElement.muted);
+      console.log('🔊 Audio element volume:', sdkAudioElement.volume);
+      
+      if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+        console.log('🔊 ⚠️  iOS DETECTED: CHECK SILENT SWITCH!');
+        console.log('🔊 ⚠️  iOS: Audio won\'t play if device is in silent mode');
+      }
     } catch (error) {
       console.log('Mobile audio unlock error (this is usually normal):', error);
     }
@@ -221,7 +233,17 @@ function OpenAIApp() {
         console.log('Audio element explicitly unmuted for playback');
       }
       
-      console.log('Connected to realtime with mobile audio support');
+      // Additional debugging after connection
+      console.log('🔊 Connected to realtime with mobile audio support');
+      if (sdkAudioElement) {
+        console.log('🔊 Final audio element state:');
+        console.log('🔊   - muted:', sdkAudioElement.muted);
+        console.log('🔊   - volume:', sdkAudioElement.volume);
+        console.log('🔊   - src:', sdkAudioElement.src);
+        console.log('🔊   - srcObject:', sdkAudioElement.srcObject);
+        console.log('🔊   - paused:', sdkAudioElement.paused);
+        console.log('🔊   - readyState:', sdkAudioElement.readyState);
+      }
     } catch (err) {
       console.error("Error connecting:", err);
       setSessionStatus("DISCONNECTED");
@@ -358,6 +380,11 @@ function OpenAIApp() {
         )}
         {sessionStatus === "CONNECTED" && isPTTUserSpeaking && (
           <div className="hint-text speaking">🔴 En cours d&apos;écoute... Relâchez pour envoyer</div>
+        )}
+        {sessionStatus === "CONNECTED" && !mobileAudioReady && /iPhone|iPad|iPod|Android/.test(navigator.userAgent) && (
+          <div className="hint-text warning" style={{color: '#e74c3c', fontSize: '12px', marginTop: '8px'}}>
+            📱 Pas de son ? Vérifiez que l&apos;interrupteur silencieux est désactivé
+          </div>
         )}
       </div>
 
