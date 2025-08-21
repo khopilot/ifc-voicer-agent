@@ -4,6 +4,7 @@ import VoiceOrbPro from "./components/VoiceOrbPro";
 import IFCLogoWatermark from "./components/IFCLogoWatermark";
 import LanguageSelector from "./components/LanguageSelector";
 import "./components/OpenAIStyle.css";
+import "./components/MobileOptimized.css";
 import { SessionStatus } from "@/app/types";
 import type { RealtimeAgent } from '@openai/agents/realtime';
 import { useTranscript } from "@/app/contexts/TranscriptContext";
@@ -152,22 +153,52 @@ function OpenAIApp() {
     }
   };
 
-  const handleTalkButtonDown = () => {
+  const handleTalkButtonDown = (e?: React.MouseEvent | React.TouchEvent) => {
     if (sessionStatus !== 'CONNECTED') return;
+    
+    // Add haptic feedback on mobile if available
+    if ('vibrate' in navigator) {
+      navigator.vibrate(10);
+    }
+    
+    // Clear any previous audio and start fresh
     interrupt();
-    setIsPTTUserSpeaking(true);
-    // Unmute microphone when PTT is pressed
-    mute(false);
     sendClientEvent({ type: 'input_audio_buffer.clear' }, 'clear PTT buffer');
+    
+    // START RECORDING - User is holding the button
+    setIsPTTUserSpeaking(true);
+    mute(false); // UNMUTE - Allow microphone input
+    
+    console.log('PTT: Started speaking (button pressed)');
   };
 
-  const handleTalkButtonUp = () => {
-    if (sessionStatus !== 'CONNECTED' || !isPTTUserSpeaking) return;
+  const handleTalkButtonUp = (e?: React.MouseEvent | React.TouchEvent) => {
+    if (sessionStatus !== 'CONNECTED') return;
+    
+    // Only process if we were actually speaking
+    if (!isPTTUserSpeaking) return;
+    
+    // STOP RECORDING - User released the button
     setIsPTTUserSpeaking(false);
+    mute(true); // MUTE - Stop microphone input immediately
+    
+    // Send the audio to AI for processing
     sendClientEvent({ type: 'input_audio_buffer.commit' }, 'commit PTT');
-    sendClientEvent({ type: 'response.create' }, 'trigger response PTT');
-    // Re-mute microphone after PTT is released
-    mute(true);
+    sendClientEvent({ type: 'response.create' }, 'trigger AI response');
+    
+    console.log('PTT: Stopped speaking (button released) - AI will respond');
+  };
+  
+  // Handle mouse leaving the button area (safety)
+  const handleTalkButtonLeave = () => {
+    if (isPTTUserSpeaking) {
+      // User's mouse/finger left the button - stop recording
+      setIsPTTUserSpeaking(false);
+      mute(true);
+      sendClientEvent({ type: 'input_audio_buffer.commit' }, 'commit PTT on leave');
+      sendClientEvent({ type: 'response.create' }, 'trigger AI response on leave');
+      console.log('PTT: Emergency stop (mouse/touch left button)');
+    }
   };
 
   const handleAgentSelect = (agentId: string) => {
@@ -226,7 +257,10 @@ function OpenAIApp() {
           <div className="hint-text">Cliquez sur connecter pour commencer</div>
         )}
         {sessionStatus === "CONNECTED" && !isPTTUserSpeaking && (
-          <div className="hint-text">Maintenez 🎤 pour parler</div>
+          <div className="hint-text">⬇️ Maintenez le bouton pour parler ⬇️</div>
+        )}
+        {sessionStatus === "CONNECTED" && isPTTUserSpeaking && (
+          <div className="hint-text speaking">🔴 En cours d'écoute... Relâchez pour envoyer</div>
         )}
       </div>
 
@@ -245,10 +279,14 @@ function OpenAIApp() {
           <button
             onMouseDown={handleTalkButtonDown}
             onMouseUp={handleTalkButtonUp}
+            onMouseLeave={handleTalkButtonLeave}
             onTouchStart={handleTalkButtonDown}
             onTouchEnd={handleTalkButtonUp}
+            onTouchCancel={handleTalkButtonLeave}
             className={`ptt-hold ${isPTTUserSpeaking ? 'speaking' : ''}`}
             title="Maintenez pour parler"
+            aria-label="Push to talk"
+            type="button"
           >
             🎤
           </button>

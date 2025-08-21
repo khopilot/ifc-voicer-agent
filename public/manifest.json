@@ -1,0 +1,17 @@
+{
+  "name": "Institut français du Cambodge - Assistant Vocal",
+  "short_name": "IFC Voice",
+  "description": "Assistant vocal multilingue pour l'Institut français du Cambodge",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2c3e50",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
