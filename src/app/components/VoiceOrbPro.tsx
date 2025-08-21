@@ -4,9 +4,10 @@ import React, { useEffect, useRef } from 'react';
 interface VoiceOrbProProps {
   isSpeaking?: boolean;
   isConnected?: boolean;
+  isRecording?: boolean;
 }
 
-export default function VoiceOrbPro({ isSpeaking = false, isConnected = false }: VoiceOrbProProps) {
+export default function VoiceOrbPro({ isSpeaking = false, isConnected = false, isRecording = false }: VoiceOrbProProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationIdRef = useRef<number>(0);
   const timeRef = useRef(0);
@@ -87,19 +88,35 @@ export default function VoiceOrbPro({ isSpeaking = false, isConnected = false }:
       // Base radius
       const baseRadius = isConnected ? 80 : 70;
       
-      // Draw outer glow layers
+      // Draw outer glow layers with enhanced effects
       if (isConnected) {
         // Multiple glow layers for depth
         for (let i = 3; i >= 0; i--) {
-          const glowRadius = baseRadius + (i * 30) + (isSpeaking ? 20 : 0);
+          const glowRadius = baseRadius + (i * 35) + (isSpeaking ? 25 : 0) + (isRecording ? 15 : 0);
           const gradient = ctx.createRadialGradient(
             centerX, centerY, 0,
             centerX, centerY, glowRadius
           );
           
-          const alpha = isSpeaking ? 0.08 : 0.04;
+          // Enhanced glow colors and intensity
+          let glowColor, alpha;
+          if (isRecording) {
+            // Red glow when recording
+            glowColor = 'rgb(239, 68, 68)';
+            alpha = 0.12 + Math.sin(timeRef.current * 8) * 0.04; // Pulsing effect
+          } else if (isSpeaking) {
+            // Blue glow when speaking
+            glowColor = 'rgb(52, 152, 219)';
+            alpha = 0.1 + Math.sin(timeRef.current * 4) * 0.03;
+          } else {
+            // Subtle default glow
+            glowColor = 'rgb(52, 73, 94)';
+            alpha = 0.04;
+          }
+          
           gradient.addColorStop(0, `rgba(44, 62, 80, 0)`);
-          gradient.addColorStop(0.5, `rgba(52, 73, 94, ${alpha * (4-i) / 4})`);
+          gradient.addColorStop(0.3, `${glowColor.replace('rgb', 'rgba').replace(')', `, ${alpha * (4-i) / 6})`)}`);
+          gradient.addColorStop(0.7, `${glowColor.replace('rgb', 'rgba').replace(')', `, ${alpha * (4-i) / 8})`)}`);
           gradient.addColorStop(1, `rgba(44, 62, 80, 0)`);
           
           ctx.fillStyle = gradient;
@@ -148,11 +165,12 @@ export default function VoiceOrbPro({ isSpeaking = false, isConnected = false }:
           audioInfluence = audioLevelsRef.current[audioIndex] * 15;
         }
         
-        // Organic breathing effect
-        const breathing = Math.sin(timeRef.current * 2) * 3;
-        const noise = Math.sin(angle * 4 + timeRef.current) * 2;
+        // Enhanced organic effects
+        const breathing = Math.sin(timeRef.current * (isRecording ? 4 : 2)) * (isRecording ? 5 : 3);
+        const noise = Math.sin(angle * 4 + timeRef.current) * (isSpeaking ? 3 : 2);
+        const recordingPulse = isRecording ? Math.sin(timeRef.current * 6) * 4 : 0;
         
-        const radius = baseRadius + breathing + audioInfluence + noise;
+        const radius = baseRadius + breathing + audioInfluence + noise + recordingPulse;
         
         const x = centerX + Math.cos(angle) * radius;
         const y = centerY + Math.sin(angle) * radius;
@@ -178,12 +196,20 @@ export default function VoiceOrbPro({ isSpeaking = false, isConnected = false }:
         centerX, centerY, baseRadius * 1.2
       );
       
-      if (isSpeaking) {
-        // Active state - vibrant navy to grey
-        mainGradient.addColorStop(0, '#4A5F7A');
-        mainGradient.addColorStop(0.3, '#2C3E50');
-        mainGradient.addColorStop(0.7, '#1A252F');
-        mainGradient.addColorStop(1, '#0F1419');
+      if (isRecording) {
+        // Recording state - red gradient with pulse
+        const intensity = 0.8 + Math.sin(timeRef.current * 6) * 0.2;
+        mainGradient.addColorStop(0, `rgba(239, 68, 68, ${intensity})`);
+        mainGradient.addColorStop(0.3, '#DC2626');
+        mainGradient.addColorStop(0.7, '#B91C1C');
+        mainGradient.addColorStop(1, '#7F1D1D');
+      } else if (isSpeaking) {
+        // Speaking state - enhanced blue gradient
+        const intensity = 0.8 + Math.sin(timeRef.current * 4) * 0.15;
+        mainGradient.addColorStop(0, `rgba(52, 152, 219, ${intensity * 0.6})`);
+        mainGradient.addColorStop(0.3, '#3498DB');
+        mainGradient.addColorStop(0.7, '#2980B9');
+        mainGradient.addColorStop(1, '#1F4E79');
       } else if (isConnected) {
         // Connected state - calm navy blue to grey
         mainGradient.addColorStop(0, '#34495E');
@@ -205,18 +231,38 @@ export default function VoiceOrbPro({ isSpeaking = false, isConnected = false }:
         centerX, centerY, baseRadius * 0.8
       );
       
-      innerGlow.addColorStop(0, 'rgba(255, 255, 255, 0.2)');
-      innerGlow.addColorStop(0.5, 'rgba(255, 255, 255, 0.05)');
-      innerGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      // Enhanced inner glow based on state
+      if (isRecording) {
+        innerGlow.addColorStop(0, 'rgba(255, 200, 200, 0.3)');
+        innerGlow.addColorStop(0.5, 'rgba(255, 150, 150, 0.1)');
+        innerGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      } else if (isSpeaking) {
+        innerGlow.addColorStop(0, 'rgba(200, 230, 255, 0.3)');
+        innerGlow.addColorStop(0.5, 'rgba(150, 200, 255, 0.1)');
+        innerGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      } else {
+        innerGlow.addColorStop(0, 'rgba(255, 255, 255, 0.2)');
+        innerGlow.addColorStop(0.5, 'rgba(255, 255, 255, 0.05)');
+        innerGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      }
       
       ctx.fillStyle = innerGlow;
       ctx.fill();
       
-      // Edge highlight for definition
-      ctx.strokeStyle = isConnected 
-        ? 'rgba(52, 73, 94, 0.3)' 
-        : 'rgba(255, 255, 255, 0.1)';
-      ctx.lineWidth = 1.5;
+      // Enhanced edge highlight based on state
+      if (isRecording) {
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)';
+        ctx.lineWidth = 2;
+      } else if (isSpeaking) {
+        ctx.strokeStyle = 'rgba(52, 152, 219, 0.5)';
+        ctx.lineWidth = 1.8;
+      } else if (isConnected) {
+        ctx.strokeStyle = 'rgba(52, 73, 94, 0.3)';
+        ctx.lineWidth = 1.5;
+      } else {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.lineWidth = 1.5;
+      }
       ctx.stroke();
       
       // Add specular highlight for 3D effect
@@ -231,9 +277,20 @@ export default function VoiceOrbPro({ isSpeaking = false, isConnected = false }:
         highlightRadius
       );
       
-      highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
-      highlightGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.1)');
-      highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      // State-based specular highlight
+      if (isRecording) {
+        highlightGradient.addColorStop(0, 'rgba(255, 220, 220, 0.5)');
+        highlightGradient.addColorStop(0.5, 'rgba(255, 200, 200, 0.15)');
+        highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      } else if (isSpeaking) {
+        highlightGradient.addColorStop(0, 'rgba(220, 240, 255, 0.5)');
+        highlightGradient.addColorStop(0.5, 'rgba(200, 230, 255, 0.15)');
+        highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      } else {
+        highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+        highlightGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.1)');
+        highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      }
       
       ctx.arc(
         centerX - baseRadius * 0.25,
@@ -260,7 +317,14 @@ export default function VoiceOrbPro({ isSpeaking = false, isConnected = false }:
           
           ctx.save();
           ctx.globalAlpha = alpha * 0.6 + 0.2;
-          ctx.fillStyle = isSpeaking ? '#5D6D7E' : '#34495E';
+          // Status dots color based on state
+          if (isRecording) {
+            ctx.fillStyle = '#EF4444';
+          } else if (isSpeaking) {
+            ctx.fillStyle = '#3498DB';
+          } else {
+            ctx.fillStyle = '#34495E';
+          }
           ctx.beginPath();
           ctx.arc(dotX, dotY, dotRadius, 0, Math.PI * 2);
           ctx.fill();
@@ -293,7 +357,7 @@ export default function VoiceOrbPro({ isSpeaking = false, isConnected = false }:
         cancelAnimationFrame(animationIdRef.current);
       }
     };
-  }, [isSpeaking, isConnected]);
+  }, [isSpeaking, isConnected, isRecording]);
 
   return (
     <canvas

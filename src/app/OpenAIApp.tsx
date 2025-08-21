@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import VoiceOrbPro from "./components/VoiceOrbPro";
 import IFCLogoWatermark from "./components/IFCLogoWatermark";
 import LanguageSelector from "./components/LanguageSelector";
+import MobileChatHistory from "./components/MobileChatHistory";
 import "./components/OpenAIStyle.css";
 import "./components/MobileOptimized.css";
 import { SessionStatus } from "@/app/types";
@@ -38,6 +39,7 @@ function OpenAIApp() {
   const [selectedLanguage, setSelectedLanguage] = useState<'FR' | 'KH' | 'EN'>('FR');
   const [mobileAudioReady, setMobileAudioReady] = useState<boolean>(false);
   const [audioUnlocked, setAudioUnlocked] = useState<boolean>(false);
+  const [isChatVisible, setIsChatVisible] = useState<boolean>(false);
   
   // NUCLEAR MOBILE AUDIO FIX
   const { 
@@ -453,25 +455,41 @@ function OpenAIApp() {
       <div className="openai-header">
         <div className="header-left">
           <div className="brand-mark">
-            <div className="brand-logo">IF</div>
-            <span className="brand-text">Institut français du Cambodge</span>
+            <div className="brand-logo">🇫🇷</div>
+            <div className="brand-text-container">
+              <span className="brand-text">Institut français</span>
+              <span className="brand-subtitle">du Cambodge</span>
+            </div>
+          </div>
+          <div className="header-separator"></div>
+          <div className="app-title">
+            <span className="app-title-text">Assistant Vocal</span>
+            <div className={`app-status ${sessionStatus.toLowerCase()}`}>
+              {sessionStatus === "CONNECTED" && "En ligne"}
+              {sessionStatus === "CONNECTING" && "Connexion..."}
+              {sessionStatus === "DISCONNECTED" && "Hors ligne"}
+            </div>
           </div>
         </div>
         <div className="header-right">
-          <LanguageSelector 
-            selectedLanguage={selectedLanguage}
-            onLanguageChange={setSelectedLanguage}
-            disabled={sessionStatus === "CONNECTING"}
-          />
-          <div className={`status-dot-minimal ${sessionStatus === "CONNECTED" ? "connected" : ""}`} />
-          {sessionStatus === "CONNECTED" && (
-            <div 
-              className={`mobile-audio-indicator ${mobileAudioReady ? 'ready' : 'waiting'}`}
-              title={mobileAudioReady ? 'Audio fonctionnel' : 'Audio en attente'}
-            >
-              {mobileAudioReady ? '🔊' : '🔇'}
+          <div className="header-controls">
+            <LanguageSelector 
+              selectedLanguage={selectedLanguage}
+              onLanguageChange={setSelectedLanguage}
+              disabled={sessionStatus === "CONNECTING"}
+            />
+            <div className="status-indicators">
+              <div className={`status-dot-minimal ${sessionStatus === "CONNECTED" ? "connected" : ""}`} />
+              {sessionStatus === "CONNECTED" && (
+                <div 
+                  className={`mobile-audio-indicator ${mobileAudioReady ? 'ready' : 'waiting'}`}
+                  title={mobileAudioReady ? 'Audio fonctionnel' : 'Audio en attente'}
+                >
+                  {mobileAudioReady ? '🔊' : '🔇'}
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -479,7 +497,8 @@ function OpenAIApp() {
       <div className="orb-wrapper">
         <VoiceOrbPro 
           isSpeaking={isPTTUserSpeaking} 
-          isConnected={sessionStatus === "CONNECTED"} 
+          isConnected={sessionStatus === "CONNECTED"}
+          isRecording={isPTTUserSpeaking}
         />
         
         {/* Hint text */}
@@ -538,8 +557,8 @@ function OpenAIApp() {
          sessionStatus === "CONNECTING" ? "Connexion..." : "Connecter"}
       </button>
 
-      {/* NUCLEAR AUDIO DEBUG PANEL - Only on mobile */}
-      {/iPhone|iPad|iPod|Android/.test(navigator.userAgent) && (
+      {/* NUCLEAR AUDIO DEBUG PANEL - Development Only */}
+      {false && process.env.NODE_ENV === 'development' && /iPhone|iPad|iPod|Android/.test(navigator.userAgent) && (
         <div style={{
           position: 'fixed',
           bottom: '200px',
@@ -565,6 +584,13 @@ function OpenAIApp() {
           </div>
         </div>
       )}
+
+      {/* Mobile Chat History */}
+      <MobileChatHistory 
+        isVisible={isChatVisible}
+        onToggle={() => setIsChatVisible(!isChatVisible)}
+        sessionStatus={sessionStatus}
+      />
 
       {/* Agent Pills */}
       <div className="agent-pills">

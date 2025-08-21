@@ -10,7 +10,7 @@
     overflow: hidden;
   }
 
-  /* Compact Header for Mobile */
+  /* Enhanced Mobile Header */
   .openai-header {
     padding: 12px 16px !important;
     position: fixed;
@@ -20,43 +20,121 @@
     align-items: center !important;
     gap: 8px !important;
     background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(44, 62, 80, 0.08);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    z-index: 500;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px !important;
+    flex: 1;
   }
 
   .brand-mark {
+    display: flex;
+    align-items: center;
     gap: 8px !important;
   }
 
   .brand-logo {
-    width: 28px !important;
-    height: 28px !important;
-    font-size: 12px !important;
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 16px !important;
+    background: linear-gradient(135deg, #003da5 0%, #0055d4 100%) !important;
+    box-shadow: 0 2px 8px rgba(0, 61, 165, 0.2) !important;
+  }
+
+  .brand-text-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
   }
 
   .brand-text {
-    font-size: 12px !important;
-    display: none; /* Hide on very small screens */
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #1a1a1a !important;
+    line-height: 1.2;
+    display: block !important;
   }
 
-  /* Responsive Orb Size */
+  .brand-subtitle {
+    font-size: 11px !important;
+    color: #666 !important;
+    font-weight: 400;
+    line-height: 1.2;
+  }
+
+  .header-separator {
+    display: none !important;
+  }
+
+  .app-title {
+    display: none !important; /* Hide on mobile to save space */
+  }
+
+  .connection-status {
+    display: none !important; /* Hide text, keep dot only */
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+  }
+
+  /* Enhanced Orb Container */
   .orb-wrapper {
-    width: 200px !important;
-    height: 200px !important;
-    margin-top: -20px; /* Center better on mobile */
+    width: 240px !important;
+    height: 240px !important;
+    margin-top: -40px;
+    position: relative;
+    z-index: 10;
+    filter: drop-shadow(0 8px 32px rgba(44, 62, 80, 0.12));
   }
 
-  /* Better Touch Target for PTT Button */
+  /* Add subtle animation to orb container */
+  @keyframes orbFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+
+  .orb-wrapper {
+    animation: orbFloat 6s ease-in-out infinite;
+  }
+
+  /* Enhanced PTT Button */
   .ptt-float {
-    bottom: 140px !important; /* Move up to avoid overlaps */
+    bottom: 140px !important;
+    z-index: 400;
   }
 
   .ptt-hold {
-    width: 80px !important;
-    height: 80px !important;
-    font-size: 32px !important;
+    width: 72px !important;
+    height: 72px !important;
+    font-size: 28px !important;
+    background: linear-gradient(135deg, #3498db, #2980b9) !important;
+    box-shadow: 0 4px 20px rgba(52, 152, 219, 0.3) !important;
+    border: 3px solid rgba(255, 255, 255, 0.9) !important;
     /* Better touch feedback */
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
+    transition: all 0.2s ease !important;
+  }
+
+  .ptt-hold.speaking {
+    background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
+    box-shadow: 0 4px 24px rgba(231, 76, 60, 0.4) !important;
+    animation: pulse 1s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
   }
 
   /* Active state for mobile touch */
@@ -65,36 +143,83 @@
     transition: transform 0.1s ease !important;
   }
 
-  /* Connect Button Position Fix */
+  /* Enhanced Connect Button */
   .connect-minimal {
-    bottom: 80px !important;
-    padding: 12px 28px !important;
-    font-size: 14px !important;
+    bottom: 220px !important;
+    padding: 14px 32px !important;
+    font-size: 15px !important;
     font-weight: 600 !important;
-    min-height: 44px; /* iOS touch target minimum */
+    min-height: 48px;
+    background: linear-gradient(135deg, #2c3e50, #34495e) !important;
+    border: none !important;
+    border-radius: 24px !important;
+    color: white !important;
+    box-shadow: 0 4px 16px rgba(44, 62, 80, 0.2) !important;
+    transition: all 0.3s ease !important;
+    z-index: 300;
   }
 
-  /* Agent Pills Mobile Optimization */
+  .connect-minimal.connected {
+    background: linear-gradient(135deg, #27ae60, #229954) !important;
+    box-shadow: 0 4px 16px rgba(39, 174, 96, 0.3) !important;
+  }
+
+  .connect-minimal:active {
+    transform: scale(0.95) !important;
+  }
+
+  /* Enhanced Agent Pills */
   .agent-pills {
-    bottom: 16px !important;
+    bottom: 20px !important;
     left: 16px !important;
     right: 16px !important;
     transform: none !important;
     width: calc(100% - 32px) !important;
-    padding: 6px !important;
-    flex-wrap: wrap; /* Allow wrapping if needed */
+    padding: 8px !important;
+    flex-wrap: nowrap;
     justify-content: center;
-    gap: 6px !important;
+    gap: 8px !important;
     max-width: none !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-radius: 20px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .agent-pills::-webkit-scrollbar {
+    display: none;
   }
 
   .agent-pill {
-    padding: 10px 16px !important;
+    padding: 12px 18px !important;
     font-size: 13px !important;
-    min-height: 40px; /* Better touch target */
+    font-weight: 600 !important;
+    min-height: 44px;
     display: flex;
     align-items: center;
-    flex: 0 1 auto;
+    flex: 0 0 auto;
+    background: rgba(244, 246, 248, 0.8) !important;
+    border: 1.5px solid rgba(44, 62, 80, 0.1) !important;
+    border-radius: 12px !important;
+    transition: all 0.3s ease !important;
+    white-space: nowrap;
+  }
+
+  .agent-pill:active {
+    transform: scale(0.95) !important;
+    background: rgba(52, 152, 219, 0.1) !important;
+    border-color: rgba(52, 152, 219, 0.3) !important;
+  }
+
+  .agent-pill.active {
+    background: linear-gradient(135deg, #3498db, #2980b9) !important;
+    color: white !important;
+    border-color: transparent !important;
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3) !important;
   }
 
   /* Transcript Mobile Optimization */
@@ -118,9 +243,10 @@
     text-align: left !important;
   }
 
-  /* Language Selector Mobile Fix */
+  /* Enhanced Language Selector */
   .language-selector {
-    transform: scale(1.1); /* Make bigger on mobile */
+    transform: scale(1) !important;
+    margin-right: 0;
   }
 
   .language-options {
@@ -295,10 +421,140 @@
   }
 }
 
-/* Accessibility improvements for mobile */
+/* Enhanced accessibility for mobile */
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .ptt-hold.speaking {
     animation: none !important;
-    transition: none !important;
+  }
+
+  .mobilePTTPulse {
+    animation: none !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .openai-header {
+    background: rgba(255, 255, 255, 1) !important;
+    border-bottom: 2px solid #000 !important;
+  }
+
+  .agent-pills {
+    background: rgba(255, 255, 255, 1) !important;
+    border: 2px solid #000 !important;
+  }
+
+  .ptt-hold {
+    border-width: 3px !important;
+  }
+
+  .connect-minimal {
+    border-width: 2px !important;
+    background: rgba(255, 255, 255, 1) !important;
+  }
+}
+
+/* Focus management for mobile */
+.ptt-hold:focus,
+.connect-minimal:focus,
+.agent-pill:focus {
+  outline: 2px solid #3498db;
+  outline-offset: 2px;
+}
+
+/* Safe area support for modern devices */
+@supports (padding: env(safe-area-inset-top)) {
+  .openai-header {
+    padding-top: max(8px, env(safe-area-inset-top)) !important;
+  }
+
+  .agent-pills {
+    padding-bottom: max(16px, calc(16px + env(safe-area-inset-bottom))) !important;
+  }
+}
+
+/* Performance optimizations for mobile */
+.orb-wrapper,
+.ptt-hold,
+.agent-pills {
+  will-change: transform;
+  contain: layout style;
+}
+
+/* Smooth scrolling for supported devices */
+@media (hover: hover) and (pointer: fine) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Reduce animations on slower devices */
+@media (prefers-reduced-motion: no-preference) {
+  .ptt-hold,
+  .connect-minimal,
+  .agent-pill {
+    transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+/* Additional Mobile Polish */
+@media (max-width: 768px) {
+  /* Hide background elements for cleaner mobile view */
+  .background-grid {
+    display: none !important;
+  }
+
+  /* Better focus states for accessibility */
+  button:focus-visible,
+  .agent-pill:focus-visible {
+    outline: 2px solid #3498db !important;
+    outline-offset: 2px !important;
+  }
+
+  /* Prevent accidental text selection */
+  .ptt-hold,
+  .agent-pill,
+  .connect-minimal,
+  .language-option {
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none !important;
+  }
+
+  /* Visual feedback for touch interactions */
+  button:active,
+  .agent-pill:active,
+  .language-option:active {
+    opacity: 0.8;
+  }
+
+  /* Ensure proper layering */
+  .openai-header {
+    z-index: 1000 !important;
+  }
+
+  .mobile-chat-overlay {
+    z-index: 900 !important;
+  }
+
+  .ptt-float {
+    z-index: 800 !important;
+  }
+
+  .connect-minimal {
+    z-index: 700 !important;
+  }
+
+  .agent-pills {
+    z-index: 600 !important;
   }
 }
