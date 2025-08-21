@@ -15,6 +15,7 @@ import { allAgentSets } from "@/app/agentConfigs";
 import { institutFrancaisCambodgeScenario, institutFrancaisCambodgeCompanyName } from "@/app/agentConfigs/institutFrancaisCambodge";
 import useAudioDownload from "./hooks/useAudioDownload";
 import { useHandleSessionHistory } from "./hooks/useHandleSessionHistory";
+import { useMobileAudioFix } from "./hooks/useMobileAudioFix";
 
 const sdkScenarioMap: Record<string, RealtimeAgent[]> = {
   institutFrancaisCambodge: institutFrancaisCambodgeScenario,
@@ -36,6 +37,16 @@ function OpenAIApp() {
   const [isPTTUserSpeaking, setIsPTTUserSpeaking] = useState<boolean>(false);
   const [selectedLanguage, setSelectedLanguage] = useState<'FR' | 'KH' | 'EN'>('FR');
   const [mobileAudioReady, setMobileAudioReady] = useState<boolean>(false);
+  
+  // NUCLEAR MOBILE AUDIO FIX
+  const { 
+    audioReady: nuclearAudioReady,
+    debugLog: audioDebugLog,
+    unlockMobileAudio: nuclearUnlock,
+    monitorAudioElement: nuclearMonitor,
+    forceAudioPlay: nuclearForcePlay,
+    ensureAudioContext: nuclearAudioContext
+  } = useMobileAudioFix();
   
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const handoffTriggeredRef = useRef(false);
@@ -61,6 +72,10 @@ function OpenAIApp() {
   useEffect(() => {
     if (sdkAudioElement && !audioElementRef.current) {
       audioElementRef.current = sdkAudioElement;
+      
+      // NUCLEAR: Start monitoring this audio element
+      console.log('🔊 NUCLEAR: Starting nuclear audio monitoring');
+      const cleanup = nuclearMonitor(sdkAudioElement);
       
       // Add mobile MediaStream-specific event listeners
       sdkAudioElement.addEventListener('loadstart', () => {
@@ -168,9 +183,12 @@ function OpenAIApp() {
       });
       
       // Cleanup observer on unmount
-      return () => observer.disconnect();
+      return () => {
+        observer.disconnect();
+        if (cleanup) cleanup();
+      };
     }
-  }, [sdkAudioElement, sessionStatus, mobileAudioReady]);
+  }, [sdkAudioElement, sessionStatus, mobileAudioReady, nuclearMonitor]);
 
   const {
     connect,
@@ -269,67 +287,6 @@ function OpenAIApp() {
     }
   };
 
-  // Critical mobile audio unlock with user gesture
-  const unlockMobileAudioWithGesture = async () => {
-    console.log('🔊 MOBILE AUDIO UNLOCK WITH USER GESTURE');
-    
-    try {
-      // 1. Resume AudioContext (required for WebRTC)
-      const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
-      if (AudioContextClass) {
-        const ctx = new AudioContextClass();
-        console.log('🔊 AudioContext state:', ctx.state);
-        if (ctx.state === 'suspended') {
-          await ctx.resume();
-          console.log('🔊 ✅ AudioContext resumed');
-        }
-      }
-      
-      // 2. Create and play silent MediaStream to unlock mobile audio
-      try {
-        const silentStream = await navigator.mediaDevices.getUserMedia({ 
-          audio: { 
-            echoCancellation: false, 
-            noiseSuppression: false, 
-            autoGainControl: false 
-          } 
-        });
-        
-        const tempAudio = new Audio();
-        tempAudio.srcObject = silentStream;
-        tempAudio.muted = true; // Don't actually play sound
-        tempAudio.volume = 0;
-        
-        await tempAudio.play();
-        console.log('🔊 ✅ Silent MediaStream played - mobile unlocked');
-        
-        // Stop the silent stream
-        silentStream.getTracks().forEach(track => track.stop());
-        tempAudio.srcObject = null;
-        
-      } catch (streamError) {
-        console.log('🔊 Silent stream unlock failed:', streamError);
-        
-        // Fallback: Try regular silent audio
-        const silentAudio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2+LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmYeBTuL0fPTgjMGHm7A7+OZSA0PVqzn77BdGAhBpePhum8hBjiR1/LNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPTgjQGHm7A7+OZSA0PVqzn77BeGQdApeHhum8iBjiR2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPTgjQGHm/A7+OZSA0PVqzn77BeGQdApeHhum8iBjiR2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYVV1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPTgjQGHm7A7+OZSA0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPTgjQGHm/A7+OZSA0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSQ0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSA0PVqzn77BeGQdApeHhum8iBjiS2fLNeSsFJHfH8N2QQAoUXrTp66hVFAlFn+DyvmYeBTuL0fPUgTQGHm/A7eSZSA0PVqzn77BeGQdApeHhum8iAA==');
-        silentAudio.volume = 0;
-        await silentAudio.play();
-        console.log('🔊 ✅ Fallback silent audio played');
-      }
-      
-      // 3. Ensure main audio element is ready
-      if (sdkAudioElement) {
-        sdkAudioElement.muted = false;
-        sdkAudioElement.volume = 1.0;
-        console.log('🔊 Main audio element configured for mobile');
-      }
-      
-      console.log('🔊 ✅ MOBILE AUDIO UNLOCK COMPLETE');
-      
-    } catch (error) {
-      console.log('🔊 ❌ Mobile audio unlock failed:', error);
-    }
-  };
 
   const connectToRealtime = async () => {
     if (sessionStatus !== "DISCONNECTED") return;
@@ -340,10 +297,14 @@ function OpenAIApp() {
     console.log('🚀 DEBUG: Is mobile:', /iPhone|iPad|iPod|Android/.test(navigator.userAgent));
 
     try {
-      // CRITICAL: Unlock mobile audio with user gesture
-      console.log('🚀 DEBUG: About to unlock mobile audio');
-      await unlockMobileAudioWithGesture();
-      console.log('🚀 DEBUG: Mobile audio unlock completed');
+      // NUCLEAR: Use the nuclear mobile audio unlock
+      console.log('🚀 DEBUG: Starting NUCLEAR mobile audio unlock');
+      await nuclearUnlock();
+      console.log('🚀 DEBUG: NUCLEAR unlock completed');
+      
+      // Also ensure AudioContext is ready
+      await nuclearAudioContext();
+      console.log('🚀 DEBUG: AudioContext ensured');
       
       const EPHEMERAL_KEY = await fetchEphemeralKey();
       if (!EPHEMERAL_KEY) return;
@@ -381,14 +342,15 @@ function OpenAIApp() {
         sdkAudioElement.volume = 1.0;
         console.log('🔊 Audio element explicitly unmuted for playback');
         
-        // Force play if srcObject is already set (WebRTC stream might be ready)
+        // NUCLEAR: Force play if srcObject is already set (WebRTC stream might be ready)
         if (sdkAudioElement.srcObject) {
-          try {
-            await sdkAudioElement.play();
-            console.log('🔊 ✅ Forced play of existing WebRTC stream');
+          console.log('🔊 NUCLEAR: Attempting nuclear force play');
+          const success = await nuclearForcePlay(sdkAudioElement);
+          if (success) {
+            console.log('🔊 ✅ NUCLEAR force play successful!');
             setMobileAudioReady(true);
-          } catch (playError) {
-            console.log('🔊 Forced play failed:', playError);
+          } else {
+            console.log('🔊 ❌ NUCLEAR force play failed - will retry');
           }
         }
       }
@@ -601,6 +563,34 @@ function OpenAIApp() {
         {sessionStatus === "CONNECTED" ? "Déconnecter" : 
          sessionStatus === "CONNECTING" ? "Connexion..." : "Connecter"}
       </button>
+
+      {/* NUCLEAR AUDIO DEBUG PANEL - Only on mobile */}
+      {/iPhone|iPad|iPod|Android/.test(navigator.userAgent) && (
+        <div style={{
+          position: 'fixed',
+          bottom: '200px',
+          left: '10px',
+          right: '10px',
+          maxHeight: '150px',
+          overflow: 'auto',
+          background: 'rgba(0,0,0,0.8)',
+          color: '#00ff00',
+          fontSize: '10px',
+          padding: '5px',
+          borderRadius: '5px',
+          fontFamily: 'monospace',
+          zIndex: 9999,
+          display: audioDebugLog.length > 0 ? 'block' : 'none'
+        }}>
+          <div style={{color: '#ffff00', fontWeight: 'bold'}}>🔊 NUCLEAR AUDIO DEBUG:</div>
+          {audioDebugLog.slice(-10).map((log, i) => (
+            <div key={i} style={{marginTop: '2px'}}>{log}</div>
+          ))}
+          <div style={{color: nuclearAudioReady ? '#00ff00' : '#ff0000', fontWeight: 'bold', marginTop: '5px'}}>
+            STATUS: {nuclearAudioReady ? '✅ AUDIO READY' : '❌ AUDIO NOT READY'}
+          </div>
+        </div>
+      )}
 
       {/* Agent Pills */}
       <div className="agent-pills">
