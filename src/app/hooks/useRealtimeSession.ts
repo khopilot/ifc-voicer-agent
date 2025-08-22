@@ -80,12 +80,58 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
 
   const handleAgentHandoff = (item: any) => {
     console.log('🔄 AGENT HANDOFF EVENT:', item);
-    const history = item.context.history;
-    const lastMessage = history[history.length - 1];
-    const agentName = lastMessage.name.split("transfer_to_")[1];
-    console.log('🔄 Transferring to agent:', agentName);
-    console.log('🌐 Context being passed:', item.context);
-    callbacks.onAgentHandoff?.(agentName);
+    console.log('🔄 Full handoff item structure:', JSON.stringify(item, null, 2));
+    
+    try {
+      // Multiple ways to extract agent name for robustness
+      let agentName: string | undefined;
+      
+      // Method 1: Try to get from history
+      if (item?.context?.history && Array.isArray(item.context.history) && item.context.history.length > 0) {
+        const lastMessage = item.context.history[item.context.history.length - 1];
+        if (lastMessage?.name && lastMessage.name.includes('transfer_to_')) {
+          agentName = lastMessage.name.split('transfer_to_')[1];
+          console.log('🔄 Agent name from history:', agentName);
+        }
+      }
+      
+      // Method 2: Try to get directly from item
+      if (!agentName && item?.agent_name) {
+        agentName = item.agent_name;
+        console.log('🔄 Agent name from item.agent_name:', agentName);
+      }
+      
+      // Method 3: Try to get from tool name in item
+      if (!agentName && item?.tool_name) {
+        if (item.tool_name.includes('transfer_to_')) {
+          agentName = item.tool_name.split('transfer_to_')[1];
+          console.log('🔄 Agent name from tool_name:', agentName);
+        }
+      }
+      
+      // Method 4: Search in the entire context for transfer indicators
+      if (!agentName && item?.context) {
+        const contextStr = JSON.stringify(item.context);
+        const transferMatch = contextStr.match(/transfer_to_(\w+)/);
+        if (transferMatch) {
+          agentName = transferMatch[1];
+          console.log('🔄 Agent name from context search:', agentName);
+        }
+      }
+      
+      if (agentName) {
+        console.log('✅ Transferring to agent:', agentName);
+        console.log('🌐 Context being passed:', item.context);
+        console.log('🌐 Selected language in context:', item.context?.selectedLanguage);
+        callbacks.onAgentHandoff?.(agentName);
+      } else {
+        console.error('❌ Could not determine target agent from handoff event');
+        console.error('❌ Handoff item structure:', item);
+      }
+    } catch (error) {
+      console.error('❌ Error in handleAgentHandoff:', error);
+      console.error('❌ Problematic item:', item);
+    }
   };
 
   useEffect(() => {

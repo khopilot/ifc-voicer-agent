@@ -279,12 +279,29 @@ function OpenAIAppContent({ selectedLanguage, setSelectedLanguage }: {
       console.log('🎯 UI: Agent handoff received, switching to:', agentName);
       console.log('🌐 UI: Current language context:', selectedLanguage);
       
-      // Haptic feedback for agent transitions
-      haptic('agentHandoff');
-      console.log('🔸 Haptic: Agent handoff');
+      // Validate that the agent exists
+      const availableAgents = allAgentSets["institutFrancaisCambodge"];
+      const targetAgent = availableAgents.find(a => a.name === agentName);
       
-      handoffTriggeredRef.current = true;
-      setSelectedAgentName(agentName);
+      if (targetAgent) {
+        console.log('✅ UI: Valid agent found:', targetAgent.name);
+        
+        // Haptic feedback for agent transitions
+        haptic('agentHandoff');
+        console.log('🔸 Haptic: Agent handoff');
+        
+        handoffTriggeredRef.current = true;
+        setSelectedAgentName(agentName);
+      } else {
+        console.error('❌ UI: Unknown agent requested:', agentName);
+        console.error('❌ UI: Available agents:', availableAgents.map(a => a.name));
+        
+        // Try to recover by staying with current agent
+        console.log('⚠️ UI: Staying with current agent:', selectedAgentName);
+        
+        // Haptic feedback for error
+        haptic('connectionError');
+      }
     },
   });
 
