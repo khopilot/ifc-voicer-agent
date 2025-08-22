@@ -155,6 +155,18 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
       await sessionRef.current.connect({ apiKey: ek });
       // Mute microphone by default - user must use PTT to speak
       sessionRef.current.mute(true);
+      
+      // Trigger initial greeting in selected language
+      // The agent will check context.selectedLanguage and respond accordingly
+      console.log('🌐 Triggering initial greeting with language:', extraContext?.selectedLanguage);
+      sessionRef.current.transport.sendEvent({ 
+        type: 'response.create',
+        response: {
+          modalities: ['text', 'audio'],
+          instructions: `Start by greeting the user. Check context.selectedLanguage (${extraContext?.selectedLanguage}) and greet in that language.`
+        }
+      } as any);
+      
       updateStatus('CONNECTED');
     },
     [callbacks, updateStatus],
