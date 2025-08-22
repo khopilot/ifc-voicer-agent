@@ -19,7 +19,8 @@ import { institutFrancaisCambodgeScenario, institutFrancaisCambodgeCompanyName }
 // import useAudioDownload from "./hooks/useAudioDownload"; // Currently unused
 import { useHandleSessionHistory } from "./hooks/useHandleSessionHistory";
 // import { useMobileAudioFix } from "./hooks/useMobileAudioFix"; // Currently unused in this refactor
-import { haptic } from "./utils/hapticManager";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { haptic, hapticManager } from "./utils/hapticManager";
 
 const sdkScenarioMap: Record<string, RealtimeAgent[]> = {
   institutFrancaisCambodge: institutFrancaisCambodgeScenario,

@@ -64,8 +64,11 @@ class HapticManager {
   };
   
   private constructor() {
-    this.checkSupport();
-    this.loadUserPreferences();
+    // Defer browser API access until after hydration
+    if (typeof window !== 'undefined') {
+      this.checkSupport();
+      this.loadUserPreferences();
+    }
   }
   
   public static getInstance(): HapticManager {
@@ -109,6 +112,11 @@ class HapticManager {
   }
   
   public isHapticEnabled(): boolean {
+    // Ensure browser APIs are initialized when needed
+    if (typeof window !== 'undefined' && this.isSupported === false && this.isEnabled === true) {
+      this.checkSupport();
+      this.loadUserPreferences();
+    }
     return this.isEnabled && this.isSupported;
   }
   
